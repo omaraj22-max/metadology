@@ -3,6 +3,48 @@ import Anthropic from "@anthropic-ai/sdk";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+// URL del Web App de Apps Script (Sheet). Server-side; cae al público si no hay var server.
+const SHEET_URL =
+  process.env.APPS_SCRIPT_URL || process.env.NEXT_PUBLIC_WEBHOOK_URL || "";
+
+// ¿El correo ya generó un análisis antes? (revisión contra el Sheet)
+// Fail-open: si el Sheet no responde, NO bloqueamos (no romper el producto por una caída).
+async function emailAlreadyUsed(correo) {
+  if (!SHEET_URL || !correo) return false;
+  try {
+    const res = await fetch(SHEET_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "check", correo }),
+      redirect: "follow",
+    });
+    if (!res.ok) return false;
+    const json = await res.json();
+    return json && json.used === true;
+  } catch (e) {
+    return false;
+  }
+}
+
+// Registra el lead en el Sheet (con dedup del lado de Apps Script).
+async function recordLead(form) {
+  if (!SHEET_URL) return;
+  try {
+    await fetch(SHEET_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "lead",
+        ...form,
+        fecha: new Date().toISOString(),
+      }),
+      redirect: "follow",
+    });
+  } catch (e) {
+    // registrar no debe romper la respuesta del análisis
+  }
+}
+
 function buildSystem({ producto, empresa, problema, link }) {
   return `Eres Aria, el copiloto de IA de Caperifai, operando con la metodología METADOLOGY ADS para campañas de Meta.
 
@@ -75,12 +117,17 @@ export async function POST(req) {
     return Response.json({ error: "Body inválido." }, { status: 400 });
   }
 
-  const { producto, empresa, problema } = form || {};
+  const { producto, empresa, problema, correo } = form || {};
   if (!producto || !empresa || !problema) {
     return Response.json(
       { error: "Faltan campos: producto, empresa o problema." },
       { status: 400 }
     );
+  }
+
+  // CANDADO SERVER-SIDE: si este correo ya usó su análisis gratis, bloquear.
+  if (await emailAlreadyUsed(correo)) {
+    return Response.json({ blocked: true });
   }
 
   const client = new Anthropic({ apiKey });
@@ -115,6 +162,9 @@ export async function POST(req) {
         { status: 502 }
       );
     }
+
+    // Generación exitosa: registramos el lead (esto deja al correo bloqueado a futuro).
+    await recordLead(form);
 
     return Response.json(data);
   } catch (e) {

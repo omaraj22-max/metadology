@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 
 // =================== CONFIG ===================
-const WEBHOOK_URL = process.env.NEXT_PUBLIC_WEBHOOK_URL || "";
+// El registro del lead y el candado por correo viven en /api/analyze (server-side).
 const DEMO_URL = process.env.NEXT_PUBLIC_DEMO_URL || "";
 
 const C = {
@@ -273,23 +273,24 @@ const LS_KEY = "caperif_lead_v1"; // 1 uso por navegador
 function LeadMagnet() {
   const [stage, setStage] = useState("form");
   const [form, setForm] = useState({ nombre: "", correo: "", telefono: "", empresa: "", producto: "", link: "", problema: "" });
-  const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [savedData, setSavedData] = useState(null);
+  const [savedBlocked, setSavedBlocked] = useState(false);
   const [ready, setReady] = useState(false); // evita flash del form en lo que revisamos localStorage
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const valid = form.nombre && /\S+@\S+\.\S+/.test(form.correo) && form.telefono && form.empresa && form.producto && form.problema;
   const locked = stage === "result";
 
-  // Al montar: si ya lo usó en este navegador, restaura su análisis y bloquea el form
+  // Al montar: si ya lo usó en este navegador, restaura su estado y bloquea el form
   useEffect(() => {
     try {
       const raw = localStorage.getItem(LS_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (parsed && parsed.data) {
+        if (parsed && (parsed.data || parsed.blocked)) {
           setForm((f) => ({ ...f, ...(parsed.form || {}) }));
-          setSavedData(parsed.data);
+          if (parsed.data) setSavedData(parsed.data);
+          if (parsed.blocked) setSavedBlocked(true);
           setStage("result");
         }
       }
@@ -297,21 +298,22 @@ function LeadMagnet() {
     setReady(true);
   }, []);
 
-  const submit = async () => {
+  const submit = () => {
     if (!valid) { setError("Completa todos los campos obligatorios."); return; }
-    setError(""); setSending(true);
-    try {
-      if (WEBHOOK_URL) {
-        await fetch(WEBHOOK_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ ...form, fecha: new Date().toISOString() }) });
-      }
-      setStage("result");
-    } catch (e) { setStage("result"); } finally { setSending(false); }
+    setError("");
+    setStage("result"); // ResultCard hace el resto vía /api/analyze: check Sheet → generar → registrar
   };
 
-  // Cuando Aria termina el análisis, lo persistimos: a partir de aquí queda bloqueado aunque refresque
+  // Análisis generado: lo persistimos. A partir de aquí queda bloqueado aunque refresque.
   const handleComplete = (data) => {
     setSavedData(data);
     try { localStorage.setItem(LS_KEY, JSON.stringify({ form, data })); } catch (e) {}
+  };
+
+  // El servidor detectó que el correo ya usó su análisis: bloqueo local también.
+  const handleBlocked = () => {
+    setSavedBlocked(true);
+    try { localStorage.setItem(LS_KEY, JSON.stringify({ form, blocked: true })); } catch (e) {}
   };
 
   return (
@@ -322,15 +324,15 @@ function LeadMagnet() {
           <h2 className="cap-display" style={{ ...h2, fontSize: 34 }}>Descubre tus ángulos de venta</h2>
           <p style={{ ...lead, margin: "14px auto 0" }}>
             {locked
-              ? "Ya generaste tu análisis gratis. Esto es lo que Aria encontró para ti."
+              ? "Tu análisis gratis ya está listo. Agenda una demo para la campaña completa."
               : "Llena el formulario. Aria hace el resto en menos de 2 minutos."}
           </p>
         </div>
         {!ready
           ? <div className="cap-pop" style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 22, padding: 48, boxShadow: "0 1px 2px rgba(15,23,42,.04), 0 30px 60px -30px rgba(15,23,42,.2)", display: "flex", justifyContent: "center" }}><span className="cap-spin" /></div>
           : stage === "form"
-            ? <FormCard form={form} set={set} submit={submit} sending={sending} error={error} valid={valid} />
-            : <ResultCard form={form} initialData={savedData} onComplete={handleComplete} />}
+            ? <FormCard form={form} set={set} submit={submit} sending={false} error={error} valid={valid} />
+            : <ResultCard form={form} initialData={savedData} initialBlocked={savedBlocked} onComplete={handleComplete} onBlocked={handleBlocked} />}
       </div>
     </section>
   );
@@ -363,12 +365,13 @@ function FormCard({ form, set, submit, sending, error, valid }) {
   );
 }
 
-function ResultCard({ form, initialData, onComplete }) {
+function ResultCard({ form, initialData, initialBlocked, onComplete, onBlocked }) {
   const [data, setData] = useState(initialData || null);
-  const [loading, setLoading] = useState(!initialData);
+  const [blocked, setBlocked] = useState(!!initialBlocked);
+  const [loading, setLoading] = useState(!initialData && !initialBlocked);
   const [err, setErr] = useState(false);
   useEffect(() => {
-    if (initialData) return; // ya restaurado de localStorage: no volver a llamar a la API
+    if (initialData || initialBlocked) return; // restaurado de localStorage: no llamar a la API
     (async () => {
       try {
         const res = await fetch("/api/analyze", {
@@ -378,6 +381,7 @@ function ResultCard({ form, initialData, onComplete }) {
         });
         if (!res.ok) throw new Error("bad status");
         const json = await res.json();
+        if (json.blocked) { setBlocked(true); if (onBlocked) onBlocked(); return; }
         if (json.error) throw new Error(json.error);
         setData(json);
         if (onComplete) onComplete(json);
@@ -394,6 +398,17 @@ function ResultCard({ form, initialData, onComplete }) {
       </div>
       {loading && <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "48px 0", gap: 16 }}><span className="cap-spin" /><span style={{ color: C.slate, fontSize: 13.5 }}>Analizando tu producto y construyendo ángulos…</span></div>}
       {err && <p style={{ color: "#E11D48", fontSize: 14, padding: "20px 0" }}>Hubo un error generando el análisis. Recarga e intenta de nuevo.</p>}
+      {blocked && (
+        <div style={{ textAlign: "center", padding: "20px 8px 4px" }}>
+          <div style={{ fontSize: 38, marginBottom: 10 }}>🔒</div>
+          <h3 className="cap-display" style={{ fontSize: 20, fontWeight: 700, color: C.navy, margin: "0 0 8px" }}>Ya usaste tu análisis gratis</h3>
+          <p style={{ fontSize: 14.5, color: C.slate, lineHeight: 1.6, maxWidth: 460, margin: "0 auto 22px" }}>
+            El análisis gratuito es uno por persona. Para llevar tus ángulos a una campaña completa
+            —creativos por ángulo, Entity IDs y lanzamiento en Meta— agenda una demo con Aria.
+          </p>
+          <button className="cap-btn cap-btn-primary" onClick={goDemo} style={{ padding: "14px 34px", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${C.violet}, ${C.blue})`, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit" }}>Solicita tu demo →</button>
+        </div>
+      )}
       {data && (
         <div className="cap-stagger">
           <div>
