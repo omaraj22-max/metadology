@@ -292,7 +292,7 @@ function LeadMagnet() {
       <div style={{ maxWidth: 820, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <Eyebrow>Pruébalo ahora</Eyebrow>
-          <h2 className="cap-display" style={{ ...h2, fontSize: 34 }}>Descubre tus ángulos de venta — gratis</h2>
+          <h2 className="cap-display" style={{ ...h2, fontSize: 34 }}>Descubre tus ángulos de venta</h2>
           <p style={{ ...lead, margin: "14px auto 0" }}>Llena el formulario. Aria hace el resto en menos de 2 minutos.</p>
         </div>
         {stage === "form"
