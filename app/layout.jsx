@@ -1,9 +1,9 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Caperif.ai · Tu buyer persona + ángulos de venta",
+  title: "Caperifai · Tu copiloto de IA para Meta Ads",
   description:
-    "Cuéntanos sobre tu producto y nuestra IA te entrega el perfil de tu cliente ideal y los ángulos listos para tus campañas en Meta.",
+    "Descubre gratis los ángulos de venta que tus anuncios deberían estar usando. Aria te los da en menos de 2 minutos.",
 };
 
 export default function RootLayout({ children }) {
@@ -17,11 +17,11 @@ export default function RootLayout({ children }) {
           crossOrigin="anonymous"
         />
         <link
-          href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
       </head>
-      <body style={{ margin: 0 }}>{children}</body>
+      <body>{children}</body>
     </html>
   );
 }

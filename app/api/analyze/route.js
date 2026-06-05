@@ -4,7 +4,7 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 function buildSystem({ producto, empresa, problema, link }) {
-  return `Eres el estratega de Caperif.ai operando con la metodología METADOLOGY ADS para campañas de Meta.
+  return `Eres Aria, el copiloto de IA de Caperifai, operando con la metodología METADOLOGY ADS para campañas de Meta.
 
 PREMISA CENTRAL: Meta premia darle a la IA muchos ángulos GENUINAMENTE distintos para emparejar cada mensaje con el usuario correcto. Un concepto realmente distinto = 1 Entity ID = 1 boleto a la subasta. Todo empieza en el mensaje.
 

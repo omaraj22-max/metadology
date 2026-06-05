@@ -1,10 +1,10 @@
-# Metadology — Caperif.ai Lead Magnet
+# Metadology — Caperifai Landing
 
-Lead magnet en Next.js: el visitante describe su producto y la IA (Claude) le devuelve un **buyer persona**, **4-5 ángulos de venta** y **2 anuncios de muestra** con la metodología METADOLOGY ADS para Meta.
+Landing page en Next.js para Caperifai: presenta la propuesta (hero, problema, cómo funciona, qué recibes, prueba) y cierra con un lead magnet donde el visitante describe su producto y **Aria** (Claude) le devuelve un **buyer persona**, **4-5 ángulos de venta** y **2 anuncios de muestra** con la metodología METADOLOGY ADS para Meta.
 
 ## Arquitectura
 
-- **`app/page.jsx`** — la landing/formulario (componente cliente). Recoge el lead y, opcionalmente, lo manda al webhook de Apps Script.
+- **`app/page.jsx`** — la landing completa + el lead magnet (componente cliente). Recoge el lead y, opcionalmente, lo manda al webhook de Apps Script.
 - **`app/api/analyze/route.js`** — proxy server-side que llama a Claude. **La API key vive solo en el servidor**, nunca se expone al navegador.
 
 ## Variables de entorno
