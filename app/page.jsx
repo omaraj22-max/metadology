@@ -268,13 +268,34 @@ function Proof() {
 }
 
 // =================== LEAD MAGNET ===================
+const LS_KEY = "caperif_lead_v1"; // 1 uso por navegador
+
 function LeadMagnet() {
   const [stage, setStage] = useState("form");
   const [form, setForm] = useState({ nombre: "", correo: "", telefono: "", empresa: "", producto: "", link: "", problema: "" });
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [savedData, setSavedData] = useState(null);
+  const [ready, setReady] = useState(false); // evita flash del form en lo que revisamos localStorage
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const valid = form.nombre && /\S+@\S+\.\S+/.test(form.correo) && form.telefono && form.empresa && form.producto && form.problema;
+  const locked = stage === "result";
+
+  // Al montar: si ya lo usó en este navegador, restaura su análisis y bloquea el form
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.data) {
+          setForm((f) => ({ ...f, ...(parsed.form || {}) }));
+          setSavedData(parsed.data);
+          setStage("result");
+        }
+      }
+    } catch (e) {}
+    setReady(true);
+  }, []);
 
   const submit = async () => {
     if (!valid) { setError("Completa todos los campos obligatorios."); return; }
@@ -287,17 +308,29 @@ function LeadMagnet() {
     } catch (e) { setStage("result"); } finally { setSending(false); }
   };
 
+  // Cuando Aria termina el análisis, lo persistimos: a partir de aquí queda bloqueado aunque refresque
+  const handleComplete = (data) => {
+    setSavedData(data);
+    try { localStorage.setItem(LS_KEY, JSON.stringify({ form, data })); } catch (e) {}
+  };
+
   return (
     <section id="cap-leadmagnet" style={{ background: `linear-gradient(180deg, ${C.bg}, ${C.bgAlt})`, padding: "72px 24px", scrollMarginTop: 70 }}>
       <div style={{ maxWidth: 820, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <Eyebrow>Pruébalo ahora</Eyebrow>
+          <Eyebrow>{locked ? "Tu análisis" : "Pruébalo ahora"}</Eyebrow>
           <h2 className="cap-display" style={{ ...h2, fontSize: 34 }}>Descubre tus ángulos de venta</h2>
-          <p style={{ ...lead, margin: "14px auto 0" }}>Llena el formulario. Aria hace el resto en menos de 2 minutos.</p>
+          <p style={{ ...lead, margin: "14px auto 0" }}>
+            {locked
+              ? "Ya generaste tu análisis gratis. Esto es lo que Aria encontró para ti."
+              : "Llena el formulario. Aria hace el resto en menos de 2 minutos."}
+          </p>
         </div>
-        {stage === "form"
-          ? <FormCard form={form} set={set} submit={submit} sending={sending} error={error} valid={valid} />
-          : <ResultCard form={form} />}
+        {!ready
+          ? <div className="cap-pop" style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 22, padding: 48, boxShadow: "0 1px 2px rgba(15,23,42,.04), 0 30px 60px -30px rgba(15,23,42,.2)", display: "flex", justifyContent: "center" }}><span className="cap-spin" /></div>
+          : stage === "form"
+            ? <FormCard form={form} set={set} submit={submit} sending={sending} error={error} valid={valid} />
+            : <ResultCard form={form} initialData={savedData} onComplete={handleComplete} />}
       </div>
     </section>
   );
@@ -330,11 +363,12 @@ function FormCard({ form, set, submit, sending, error, valid }) {
   );
 }
 
-function ResultCard({ form }) {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+function ResultCard({ form, initialData, onComplete }) {
+  const [data, setData] = useState(initialData || null);
+  const [loading, setLoading] = useState(!initialData);
   const [err, setErr] = useState(false);
   useEffect(() => {
+    if (initialData) return; // ya restaurado de localStorage: no volver a llamar a la API
     (async () => {
       try {
         const res = await fetch("/api/analyze", {
@@ -346,6 +380,7 @@ function ResultCard({ form }) {
         const json = await res.json();
         if (json.error) throw new Error(json.error);
         setData(json);
+        if (onComplete) onComplete(json);
       } catch (e) { setErr(true); } finally { setLoading(false); }
     })();
   }, []);
