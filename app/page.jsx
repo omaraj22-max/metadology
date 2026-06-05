@@ -231,8 +231,8 @@ function WhatYouGet() {
   return (
     <Section>
       <div style={{ textAlign: "center", maxWidth: 640, margin: "0 auto" }}>
-        <Eyebrow>Lo que recibes, gratis</Eyebrow>
-        <h2 className="cap-display" style={h2}>Todo esto sin pagar una mensualidad</h2>
+        <Eyebrow>Lo que recibes</Eyebrow>
+        <h2 className="cap-display" style={h2}>Sólo llena el formulario</h2>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginTop: 44 }} className="cap-2col">
         {items.map(([t, d, m], i) => (
@@ -259,7 +259,7 @@ function Proof() {
         <h2 className="cap-display" style={h2}>¿Por qué te lo damos gratis?</h2>
         <p style={{ ...lead, margin: "18px auto 0" }}>
           Sencillo: la mayoría nunca ha visto lo que es trabajar con una IA que de verdad entiende
-          su negocio. Te mostramos una probada. Si te sirve —y te va a servir— ya sabrás dónde
+          su negocio. Te mostramos una probada. Si te sirve, y te va a servir ya sabrás dónde
           encontrarnos. Sin compromiso, sin tarjeta, sin letra chica.
         </p>
       </div>
