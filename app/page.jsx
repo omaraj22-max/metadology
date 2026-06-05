@@ -22,27 +22,18 @@ const C = {
 };
 
 // =================== LOGO ===================
-function LogoMark({ size = 34 }) {
-  // Isotipo: flecha/"a" — mitad superior verde, inferior violeta, con hueco interior
+function Wordmark({ height = 28, dark }) {
+  // Logo horizontal real (isotipo + wordmark). En fondo oscuro se invierte a blanco.
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" aria-label="Caperifai">
-      {/* bloque verde superior-derecho */}
-      <path d="M30 8 L92 8 L92 70 L72 70 L72 28 L30 28 Z" fill="#2DD4A8" />
-      {/* cuerpo violeta (forma de a / flecha) */}
-      <path d="M8 30 L62 30 L62 92 L42 92 L42 78 L24 78 C14 78 8 70 8 60 Z" fill="#5A3AFF" />
-      {/* hueco interior */}
-      <path d="M28 48 L42 48 L42 62 L30 62 C25 62 24 56 24 53 C24 50 26 48 28 48 Z" fill="#FFFFFF" />
-    </svg>
-  );
-}
-function Wordmark({ size = 22, dark }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-      <LogoMark size={size + 10} />
-      <span className="cap-display" style={{ fontSize: size, fontWeight: 700, color: dark ? "#fff" : C.navy, letterSpacing: "-0.02em" }}>
-        Caperif<span style={{ color: C.violet }}>ai</span>
-      </span>
-    </div>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/logo.png"
+      alt="Caperifai"
+      style={{
+        height, width: "auto", display: "block",
+        filter: dark ? "brightness(0) invert(1)" : "none",
+      }}
+    />
   );
 }
 
@@ -76,7 +67,7 @@ function Nav() {
       backdropFilter: "blur(12px)", borderBottom: `1px solid ${C.borderSoft}`,
     }}>
       <div style={{ maxWidth: 1120, margin: "0 auto", padding: "14px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <Wordmark size={19} />
+        <Wordmark height={26} />
         <button className="cap-btn cap-btn-primary cap-nav-cta" onClick={scrollToForm} style={{ ...btnPrimary(13, "9px 18px"), whiteSpace: "nowrap" }}>
           <span className="cap-cta-full">Generar mis ángulos gratis</span>
           <span className="cap-cta-short">Probar gratis</span>
@@ -421,7 +412,7 @@ function Footer() {
   return (
     <footer style={{ background: C.navy, color: "rgba(255,255,255,.7)", padding: "40px 24px" }}>
       <div style={{ maxWidth: 1120, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
-        <Wordmark size={18} dark />
+        <Wordmark height={24} dark />
         <span style={{ fontSize: 12.5 }}>© Caperifai 2026 · El copiloto de IA para tus campañas</span>
       </div>
     </footer>
