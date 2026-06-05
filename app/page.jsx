@@ -77,8 +77,9 @@ function Nav() {
     }}>
       <div style={{ maxWidth: 1120, margin: "0 auto", padding: "14px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <Wordmark size={19} />
-        <button className="cap-btn cap-btn-primary" onClick={scrollToForm} style={btnPrimary(13, "9px 18px")}>
-          Generar mis ángulos gratis
+        <button className="cap-btn cap-btn-primary cap-nav-cta" onClick={scrollToForm} style={{ ...btnPrimary(13, "9px 18px"), whiteSpace: "nowrap" }}>
+          <span className="cap-cta-full">Generar mis ángulos gratis</span>
+          <span className="cap-cta-short">Probar gratis</span>
         </button>
       </div>
     </nav>
@@ -95,7 +96,7 @@ function Hero() {
       <div style={{ maxWidth: 1120, margin: "0 auto", padding: "76px 24px 64px", display: "grid", gridTemplateColumns: "1.05fr .95fr", gap: 56, alignItems: "center" }} className="cap-hero-grid">
         <div className="cap-fade">
           <span style={pill}>Tu copiloto de IA para Meta Ads</span>
-          <h1 className="cap-display" style={{ fontSize: 46, lineHeight: 1.06, fontWeight: 700, color: C.navy, margin: "18px 0 0", letterSpacing: "-0.03em" }}>
+          <h1 className="cap-display" style={{ fontSize: "clamp(33px, 8.5vw, 46px)", lineHeight: 1.08, fontWeight: 700, color: C.navy, margin: "18px 0 0", letterSpacing: "-0.03em" }}>
             Tu agencia te cobra cada mes.<br /><span style={{ background: `linear-gradient(120deg, ${C.violet}, ${C.cyan})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>¿Y los resultados?</span>
           </h1>
           <p style={{ fontSize: 17.5, lineHeight: 1.55, color: C.slate, margin: "20px 0 0", maxWidth: 480 }}>
@@ -379,7 +380,7 @@ function ResultCard({ form }) {
           </div>
           <div>
             <SectionTitle n="02" t="Tus ángulos de venta" />
-            <div style={tableWrap}><table style={tableStyle}>
+            <div style={tableWrap}><table style={{ ...tableStyle, minWidth: 460 }}>
               <thead><tr><th style={thc}>Ángulo</th><th style={thc}>Temp.</th><th style={thc}>Dolor</th><th style={thc}>Hooks (0-3s)</th></tr></thead>
               <tbody>{data.angulos.map((a, i) => (
                 <tr key={i} className="cap-row" style={{ borderTop: `1px solid ${C.borderSoft}` }}>
@@ -451,7 +452,7 @@ const card = { background: C.bg, border: `1px solid ${C.border}`, borderRadius: 
 const pill = { display: "inline-block", fontSize: 12.5, fontWeight: 600, color: C.violet, background: "#F1EEFF", border: "1px solid #E5DEFF", padding: "6px 13px", borderRadius: 20 };
 const btnPrimary = (fs, pad) => ({ border: "none", borderRadius: 12, background: `linear-gradient(135deg, ${C.violet}, ${C.blue})`, color: "#fff", fontWeight: 600, fontSize: fs, padding: pad, cursor: "pointer", fontFamily: "inherit" });
 const btnGhost = (fs, pad) => ({ border: `1px solid ${C.border}`, borderRadius: 12, background: "#fff", color: C.navy, fontWeight: 600, fontSize: fs, padding: pad, cursor: "pointer", fontFamily: "inherit" });
-const tableWrap = { border: `1px solid ${C.border}`, borderRadius: 16, overflow: "hidden" };
+const tableWrap = { border: `1px solid ${C.border}`, borderRadius: 16, overflowX: "auto", WebkitOverflowScrolling: "touch" };
 const tableStyle = { width: "100%", borderCollapse: "collapse", fontSize: 13.5, lineHeight: 1.5 };
 const tdc = { padding: "12px 15px", textAlign: "left", verticalAlign: "middle" };
 const thc = { padding: "11px 15px", textAlign: "left", fontSize: 11, color: C.slate, fontWeight: 600, textTransform: "uppercase", letterSpacing: .5, background: C.surfaceAlt };

@@ -133,6 +133,9 @@
     transform: rotate(360deg);
   }
 }
+.cap-cta-short {
+  display: none;
+}
 @media (max-width: 860px) {
   .cap-hero-grid {
     grid-template-columns: 1fr !important;
@@ -142,6 +145,14 @@
   }
   .cap-2col {
     grid-template-columns: 1fr !important;
+  }
+}
+@media (max-width: 560px) {
+  .cap-cta-full {
+    display: none;
+  }
+  .cap-cta-short {
+    display: inline;
   }
 }
 @media (prefers-reduced-motion: reduce) {
