@@ -301,6 +301,14 @@ function LeadMagnet() {
   const submit = () => {
     if (!valid) { setError("Completa todos los campos obligatorios."); return; }
     setError("");
+    // Evento de conversión al enviar el formulario
+    try {
+      if (typeof window !== "undefined") {
+        if (typeof window.fbq === "function") window.fbq("track", "Lead");
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({ event: "lead_submit" });
+      }
+    } catch (e) {}
     setStage("result"); // ResultCard hace el resto vía /api/analyze: check Sheet → generar → registrar
   };
 
