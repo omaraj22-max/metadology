@@ -117,10 +117,10 @@ export async function POST(req) {
     return Response.json({ error: "Body inválido." }, { status: 400 });
   }
 
-  const { producto, empresa, problema, correo } = form || {};
-  if (!producto || !empresa || !problema) {
+  const { producto, problema, correo } = form || {};
+  if (!producto || !problema) {
     return Response.json(
-      { error: "Faltan campos: producto, empresa o problema." },
+      { error: "Faltan campos: producto o problema." },
       { status: 400 }
     );
   }

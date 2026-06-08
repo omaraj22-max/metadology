@@ -169,3 +169,41 @@
     transform: none;
   }
 }
+
+/* ===== Multistep form (.cf-*) ===== */
+.cf-disp { font-family: "Sora", sans-serif; letter-spacing: -0.02em; }
+.cf-fade { animation: cfFade 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes cfFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.cf-input {
+  width: 100%; padding: 14px 16px; border-radius: 12px;
+  border: 1.5px solid #e2e8f0; background: #fff;
+  font-size: 15px; font-family: inherit; color: #0f172a;
+  transition: border-color 0.15s, box-shadow 0.15s; outline: none;
+}
+.cf-input::placeholder { color: #94a3b8; }
+.cf-input:focus { border-color: #5a3aff; box-shadow: 0 0 0 4px rgba(90, 58, 255, 0.12); }
+.cf-input.err { border-color: #ef4444; box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1); }
+textarea.cf-input { resize: vertical; min-height: 128px; line-height: 1.5; }
+.cf-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font-family: inherit; font-weight: 600; font-size: 15px; cursor: pointer;
+  border: none; border-radius: 12px; padding: 13px 22px;
+  transition: transform 0.12s, box-shadow 0.2s, opacity 0.2s;
+}
+.cf-btn:active { transform: translateY(1px); }
+.cf-btn--primary {
+  color: #fff; background: linear-gradient(135deg, #5a3aff, #2563eb);
+  box-shadow: 0 8px 20px -6px rgba(90, 58, 255, 0.55);
+}
+.cf-btn--primary:hover { box-shadow: 0 12px 26px -6px rgba(90, 58, 255, 0.65); }
+.cf-btn--ghost { background: #fff; color: #0f172a; border: 1.5px solid #e2e8f0; }
+.cf-btn--ghost:hover { border-color: #cbd5e1; }
+.cf-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.cf-spin { animation: cfSpin 1s linear infinite; }
+@keyframes cfSpin { to { transform: rotate(360deg); } }
+@media (max-width: 860px) {
+  .cf-card { grid-template-columns: 1fr !important; }
+  .cf-aside { display: none !important; }
+  .cf-main { padding: 26px 22px 30px !important; min-height: 0 !important; }
+  .cf-grid2 { grid-template-columns: 1fr !important; }
+}
