@@ -388,7 +388,7 @@ function MultiStepForm({ form, setForm, onSubmit }) {
       <div className="cf-card cap-pop" style={{ background: C.bg, borderRadius: 28, boxShadow: "0 40px 80px -30px rgba(15,23,42,.30), 0 2px 8px rgba(15,23,42,.04)", overflow: "hidden", display: "grid", gridTemplateColumns: "300px 1fr", border: `1px solid ${C.border}` }}>
         {/* ASIDE / STEPPER */}
         <aside className="cf-aside" style={{ background: C.bgAlt, borderRight: `1px solid ${C.border}`, padding: "32px 28px", display: "flex", flexDirection: "column" }}>
-          <Wordmark height={26} />
+          <div><Wordmark height={28} /></div>
           <div style={{ marginTop: 40, flex: 1 }}>
             {STEPS.map((s, i) => {
               const active = step === s.id;
