@@ -426,6 +426,26 @@ function MultiStepForm({ form, setForm, onSubmit }) {
             <div style={{ height: "100%", width: `${pct}%`, borderRadius: 99, background: `linear-gradient(90deg, ${C.violet}, ${C.blue}, ${C.cyan})`, transition: "width .4s cubic-bezier(.2,.8,.2,1)" }} />
           </div>
 
+          {/* Stepper compacto: solo visible en mobile (el aside se oculta) */}
+          <div className="cf-mobile-steps" style={{ marginTop: 20, alignItems: "flex-start" }}>
+            {STEPS.map((s, i) => {
+              const active = step === s.id;
+              const complete = step > s.id;
+              const Icon = s.icon;
+              return (
+                <React.Fragment key={s.id}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flexShrink: 0, width: 64 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: 11, display: "grid", placeItems: "center", color: active || complete ? "#fff" : C.slate, background: active || complete ? `linear-gradient(135deg, ${C.violet}, ${C.blue})` : C.bg, border: active || complete ? "none" : `1.5px solid ${C.border}`, transition: "all .25s" }}>
+                      {complete ? <Check size={15} /> : <Icon size={15} />}
+                    </div>
+                    <span style={{ fontSize: 11, fontWeight: 600, textAlign: "center", lineHeight: 1.2, color: active || complete ? C.ink : C.slate }}>{s.title}</span>
+                  </div>
+                  {i < STEPS.length - 1 && <div style={{ flex: 1, height: 2, marginTop: 16, borderRadius: 2, background: complete ? `linear-gradient(90deg, ${C.violet}, ${C.blue})` : C.border }} />}
+                </React.Fragment>
+              );
+            })}
+          </div>
+
           <div style={{ flex: 1, marginTop: 36 }}>
             {step === 1 && (
               <StepShell eyebrow="Paso 1" title="Cuéntanos de tu empresa" subtitle="Aria necesita saber qué ofreces para generar ángulos de venta que conviertan.">
