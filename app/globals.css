@@ -201,6 +201,13 @@ textarea.cf-input { resize: vertical; min-height: 128px; line-height: 1.5; }
 .cf-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .cf-spin { animation: cfSpin 1s linear infinite; }
 @keyframes cfSpin { to { transform: rotate(360deg); } }
+/* Ángulos: tabla en desktop, tarjetas apiladas en mobile */
+.cap-angulos-cards { display: none; }
+@media (max-width: 640px) {
+  .cap-angulos-table { display: none; }
+  .cap-angulos-cards { display: grid; }
+}
+
 .cf-mobile-steps { display: none; }
 @media (max-width: 860px) {
   .cf-card { grid-template-columns: 1fr !important; }

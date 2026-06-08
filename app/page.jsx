@@ -596,7 +596,8 @@ function ResultCard({ form, initialData, initialBlocked, onComplete, onBlocked }
           </div>
           <div>
             <SectionTitle n="02" t="Tus ángulos de venta" />
-            <div style={tableWrap}><table style={{ ...tableStyle, minWidth: 460 }}>
+            {/* Desktop: tabla */}
+            <div className="cap-angulos-table" style={tableWrap}><table style={{ ...tableStyle, minWidth: 460 }}>
               <thead><tr><th style={thc}>Ángulo</th><th style={thc}>Temp.</th><th style={thc}>Dolor</th><th style={thc}>Hooks (0-3s)</th></tr></thead>
               <tbody>{data.angulos.map((a, i) => (
                 <tr key={i} className="cap-row" style={{ borderTop: `1px solid ${C.borderSoft}` }}>
@@ -607,6 +608,32 @@ function ResultCard({ form, initialData, initialBlocked, onComplete, onBlocked }
                 </tr>
               ))}</tbody>
             </table></div>
+            {/* Mobile: tarjetas apiladas */}
+            <div className="cap-angulos-cards" style={{ gap: 12 }}>
+              {data.angulos.map((a, i) => (
+                <div key={i} style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 16 }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                    <div>
+                      <b style={{ color: C.navy, fontSize: 14.5 }}>{a.nombre}</b>
+                      <div style={{ color: C.slate, fontSize: 11, marginTop: 3 }}>{a.conciencia}</div>
+                    </div>
+                    <Temp t={a.temperatura} />
+                  </div>
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ fontSize: 10.5, color: C.slate, textTransform: "uppercase", letterSpacing: .5, fontWeight: 600, marginBottom: 4 }}>Dolor que ataca</div>
+                    <div style={{ fontSize: 13.5, color: C.slate, lineHeight: 1.5 }}>{a.dolor}</div>
+                  </div>
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ fontSize: 10.5, color: C.slate, textTransform: "uppercase", letterSpacing: .5, fontWeight: 600, marginBottom: 4 }}>Hooks (0-3s)</div>
+                    {a.hooks.map((h, j) => (
+                      <div key={j} style={{ marginBottom: 5, paddingLeft: 14, position: "relative", fontSize: 13.5, color: C.ink, lineHeight: 1.5 }}>
+                        <span style={{ position: "absolute", left: 0, color: C.violet }}>›</span>{h}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
           <div>
             <SectionTitle n="03" t="2 anuncios de muestra" />
