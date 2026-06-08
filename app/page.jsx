@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Sparkles, ArrowLeft, ArrowRight, Check, Building2, Target, Send, Loader2 } from "lucide-react";
 
 // =================== CONFIG ===================
@@ -373,7 +373,29 @@ function MultiStepForm({ form, setForm, onSubmit }) {
     return Object.keys(er).length === 0;
   };
 
-  const next = () => { if (validate(step)) setStep((s) => Math.min(3, s + 1)); };
+  const startedRef = useRef(false);
+  const track = (event, extra) => {
+    try {
+      if (typeof window !== "undefined") {
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({ event, ...(extra || {}) });
+      }
+    } catch (e) {}
+  };
+
+  const next = () => {
+    if (!validate(step)) return;
+    const target = Math.min(3, step + 1);
+    // Embudo: el usuario completó el paso 1 (empezó el formulario)
+    if (target === 2 && !startedRef.current) {
+      startedRef.current = true;
+      track("form_start");
+      try { if (typeof window !== "undefined" && typeof window.fbq === "function") window.fbq("trackCustom", "FormStart"); } catch (e) {}
+    }
+    // Embudo: llegó al último paso (contacto)
+    if (target === 3) track("form_step_3");
+    setStep(target);
+  };
   const back = () => setStep((s) => Math.max(1, s - 1));
   const submit = () => {
     if (!validate(3)) return;
