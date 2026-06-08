@@ -49,12 +49,12 @@ export default function CaperifLanding() {
     <div style={{ background: C.bg, color: C.ink, fontFamily: "'Inter', system-ui, sans-serif", WebkitFontSmoothing: "antialiased" }}>
       <Nav />
       <Hero />
+      <LeadMagnet />
       <LogosStrip />
       <Problem />
       <HowItWorks />
       <WhatYouGet />
       <Proof />
-      <LeadMagnet />
       <Footer />
     </div>
   );
