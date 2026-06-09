@@ -3,9 +3,12 @@ import Anthropic from "@anthropic-ai/sdk";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-// URL del Web App de Apps Script (Sheet). Server-side; cae al público si no hay var server.
+// URL del Web App de Apps Script (Sheet). La env var tiene prioridad; si no está
+// configurada en Vercel, usamos este fallback para que los leads SIEMPRE se registren.
 const SHEET_URL =
-  process.env.APPS_SCRIPT_URL || process.env.NEXT_PUBLIC_WEBHOOK_URL || "";
+  process.env.APPS_SCRIPT_URL ||
+  process.env.NEXT_PUBLIC_WEBHOOK_URL ||
+  "https://script.google.com/macros/s/AKfycbyzmGS0QC27C9WNsaD7rKmEebPnQSGIA0TS6YXBIzFdmOCPqPZR2fFLE0h6iNgvF-JU/exec";
 
 // ¿El correo ya generó un análisis antes? (revisión contra el Sheet)
 // Fail-open: si el Sheet no responde, NO bloqueamos (no romper el producto por una caída).
@@ -130,6 +133,10 @@ export async function POST(req) {
     return Response.json({ blocked: true });
   }
 
+  // Registramos el lead AQUÍ (antes de generar): para un lead magnet, capturar el
+  // lead es la prioridad — aunque Claude falle, el contacto queda guardado en el Sheet.
+  await recordLead(form);
+
   const client = new Anthropic({ apiKey });
 
   try {
@@ -163,8 +170,6 @@ export async function POST(req) {
       );
     }
 
-    // Generación exitosa: registramos el lead (esto deja al correo bloqueado a futuro).
-    await recordLead(form);
 
     return Response.json(data);
   } catch (e) {
