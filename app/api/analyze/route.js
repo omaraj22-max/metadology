@@ -105,14 +105,6 @@ REGLA ANUNCIOS: genera EXACTAMENTE 2 anuncios estáticos de muestra, de 2 ángul
 }
 
 export async function POST(req) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    return Response.json(
-      { error: "Falta ANTHROPIC_API_KEY en el servidor." },
-      { status: 500 }
-    );
-  }
-
   let form;
   try {
     form = await req.json();
@@ -133,9 +125,17 @@ export async function POST(req) {
     return Response.json({ blocked: true });
   }
 
-  // Registramos el lead AQUÍ (antes de generar): para un lead magnet, capturar el
-  // lead es la prioridad — aunque Claude falle, el contacto queda guardado en el Sheet.
+  // Capturamos el lead LO ANTES POSIBLE: antes incluso del gate de la API key.
+  // Si falta la key o Claude falla, el contacto igual queda guardado en el Sheet.
   await recordLead(form);
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return Response.json(
+      { error: "Falta ANTHROPIC_API_KEY en el servidor." },
+      { status: 500 }
+    );
+  }
 
   const client = new Anthropic({ apiKey });
 
