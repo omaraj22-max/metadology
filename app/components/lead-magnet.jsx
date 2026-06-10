@@ -25,7 +25,7 @@ const C = {
 const STEPS = [
   { id: 1, title: "Tu empresa", desc: "Cuéntanos qué vendes", icon: Building2 },
   { id: 2, title: "El problema", desc: "Qué resuelve tu oferta", icon: Target },
-  { id: 3, title: "Contacto", desc: "A dónde mandamos los ángulos", icon: Send },
+  { id: 3, title: "Anuncios Ganadores", desc: "Listos para copiar y pegar", icon: Send },
 ];
 
 function Wordmark({ height = 28, dark }) {
