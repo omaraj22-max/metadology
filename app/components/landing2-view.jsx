@@ -61,7 +61,7 @@ export default function Landing2View() {
               </h1>
 
               <p className="t-body-lg hero-sub">
-                Dile a Aria qué vendes y obten tus primeros 3 anuncios ganadores en 2 minutos con los ángulos mueven a tu cliente.
+                Dile a Aria qué vendes y obtén tus primeros 3 anuncios ganadores en 2 minutos, con los ángulos que mueven a tu cliente.
               </p>
 
               <div className="hero-actions">
