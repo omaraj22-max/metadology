@@ -5,11 +5,11 @@ export default function LegalShell({ children }) {
     <div className="legal">
       <header className="legal-nav">
         <div className="legal-wrap">
-          <a href="/landing-2" aria-label="Caperifai inicio">
+          <a href="/" aria-label="Caperifai inicio">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="Caperifai" style={{ height: 26, width: "auto", display: "block" }} />
           </a>
-          <a href="/landing-2" className="legal-back">← Volver al sitio</a>
+          <a href="/" className="legal-back">← Volver al sitio</a>
         </div>
       </header>
 
