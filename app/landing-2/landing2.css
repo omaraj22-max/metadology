@@ -252,10 +252,11 @@ img { display: block; max-width: 100%; }
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--text-400);
+  white-space: nowrap;
   transition: color 140ms ease;
 }
 .nav-links a:hover { color: var(--text-900); }
-@media (max-width: 700px) { .nav-links { display: none; } }
+@media (max-width: 860px) { .nav-links { display: none; } }
 
 /* =========================================================
    SECTION UTIL
