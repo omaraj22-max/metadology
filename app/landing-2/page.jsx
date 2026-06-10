@@ -56,8 +56,8 @@ export default function Landing2() {
 
               <h1 className="t-display hero-h1">
                 Tus anuncios no fallan<br />
-                por el presupuesto.<br />
-                <span className="grad-text">Fallan porque le hablan a nadie.</span>
+                por el algoritmo.<br />
+                <span className="grad-text">Fallan porque no le hablan a nadie.</span>
               </h1>
 
               <p className="t-body-lg hero-sub">
@@ -100,26 +100,13 @@ export default function Landing2() {
             <div className="aria-wrap">
               <div className="aria-card">
                 <div className="aria-header">
-                  <div className="aria-id">
-                    <div className="aria-avatar" aria-hidden="true">
-                      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                        <circle cx="9" cy="6.5" r="3" fill="white" opacity="0.95" />
-                        <path d="M2.5 17c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5" stroke="white" strokeWidth="1.4" strokeLinecap="round" opacity="0.8" />
-                      </svg>
-                    </div>
-                    <div>
-                      <div className="aria-name">Aria</div>
-                      <div className="aria-status">
-                        <span className="status-dot" aria-hidden="true"></span>
-                        Copiloto activo
-                      </div>
-                    </div>
-                  </div>
-                  <span className="aria-badge">Meta Ads AI</span>
+                  <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.0625rem", fontWeight: 700, color: "var(--text-900)", letterSpacing: "-0.01em" }}>
+                    Esto es lo que obtienes gratis
+                  </h3>
                 </div>
 
                 <p className="aria-msg">
-                  Analicé tu negocio y encontré <strong>4 ángulos</strong> que tus anuncios no están usando:
+                  Análisis de tu negocio y <strong>4 ángulos</strong> que tus anuncios no están usando.
                 </p>
 
                 <ul className="angles-list" aria-label="Ángulos de venta">
@@ -149,6 +136,9 @@ export default function Landing2() {
                 </div>
               </div>
 
+              <p style={{ fontSize: "0.75rem", color: "var(--text-400)", textAlign: "center", margin: "2px 0 0" }}>
+                Resultado promedio que obtienen nuestros clientes*
+              </p>
               <div className="metrics-row" aria-label="Resultados de referencia">
                 <div className="metric-box">
                   <div className="metric-val green">4.3x</div>
@@ -423,6 +413,9 @@ export default function Landing2() {
             <a href="mailto:hola@caperif.ai">Contacto</a>
           </nav>
         </div>
+        <p className="wrap" style={{ marginTop: "var(--s4)", fontSize: "0.6875rem", lineHeight: 1.5, color: "var(--text-200)" }}>
+          *Resultados obtenidos promedio, Aria no asegura ningún resultado y puede haber variabilidad por diferentes factores.
+        </p>
       </footer>
     </>
   );
