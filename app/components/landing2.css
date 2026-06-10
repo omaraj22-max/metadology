@@ -539,8 +539,11 @@ img { display: block; max-width: 100%; }
 }
 
 @media (max-width: 880px) {
-  .hero-grid { grid-template-columns: 1fr; gap: var(--s12); }
-  .aria-wrap { order: -1; }
+  .hero-grid { grid-template-columns: 1fr; gap: var(--s8); }
+  /* En mobile el copy (headline + subtítulo) va primero para que se vea en el primer fold;
+     la tarjeta de Aria queda debajo. */
+  .aria-wrap { order: 1; }
+  .hero { padding-top: calc(62px + var(--s8)); }
 }
 
 /* =========================================================
