@@ -408,8 +408,8 @@ export default function Landing2() {
           <img src="/logo.png" alt="Caperifai" style={{ height: 24, width: "auto", display: "block" }} />
           <p className="footer-copy">2026 Caperifai. El copiloto de IA para tus campañas en Meta.</p>
           <nav className="footer-links" aria-label="Links de footer">
-            <a href="#">Privacidad</a>
-            <a href="#">Términos</a>
+            <a href="/privacidad">Privacidad</a>
+            <a href="/terminos">Términos</a>
             <a href="mailto:hola@caperif.ai">Contacto</a>
           </nav>
         </div>
