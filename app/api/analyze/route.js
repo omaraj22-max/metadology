@@ -57,7 +57,8 @@ const APIFY_ACTOR = "automation-lab~facebook-ads-library";
 async function fetchCompetitorAds(producto) {
   if (!APIFY_TOKEN || !producto) return [];
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 45000);
+  // Timeout ajustado para dejar margen al análisis competitivo dentro del límite de Vercel (60s Hobby).
+  const timer = setTimeout(() => controller.abort(), 35000);
   try {
     const res = await fetch(
       `https://api.apify.com/v2/acts/${APIFY_ACTOR}/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
@@ -258,7 +259,8 @@ export async function POST(req) {
     if (wantsCompetitive && ads.length) {
       try {
         const compMsg = await client.messages.create({
-          model,
+          // Haiku: más rápido/barato; suficiente para resumir anuncios. Mantiene el total bajo 60s.
+          model: process.env.ANTHROPIC_COMPETITIVE_MODEL || "claude-haiku-4-5-20251001",
           max_tokens: 1200,
           system: competitiveSystem(ads, form),
           messages: [
