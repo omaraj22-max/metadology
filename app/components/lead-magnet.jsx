@@ -53,7 +53,7 @@ const thc = { padding: "11px 15px", textAlign: "left", fontSize: 11, color: C.sl
 // =================== LEAD MAGNET ===================
 // `wrapped` (default true) envuelve el form en una <section> con fondo.
 // En landing-2 lo montamos dentro de su propia sección, así que pasamos wrapped={false}.
-export function LeadMagnet({ wrapped = true } = {}) {
+export function LeadMagnet({ wrapped = true, competitive = false } = {}) {
   const [stage, setStage] = useState("form");
   const [form, setForm] = useState({ nombre: "", correo: "", telefono: "", empresa: "", producto: "", link: "", problema: "" });
   const [savedData, setSavedData] = useState(null);
@@ -110,7 +110,7 @@ export function LeadMagnet({ wrapped = true } = {}) {
         <h2 className="cap-display" style={{ ...h2, fontSize: 34 }}>Descubre tus ángulos de venta</h2>
         <p style={{ ...lead, margin: "14px auto 0" }}>Tu análisis gratis ya está listo. Agenda una demo para la campaña completa.</p>
       </div>
-      <ResultCard form={form} initialData={savedData} initialBlocked={savedBlocked} onComplete={handleComplete} onBlocked={handleBlocked} />
+      <ResultCard form={form} initialData={savedData} initialBlocked={savedBlocked} onComplete={handleComplete} onBlocked={handleBlocked} competitive={competitive} />
     </div>
   );
 
@@ -331,7 +331,7 @@ function AriaCard({ step }) {
   );
 }
 
-function ResultCard({ form, initialData, initialBlocked, onComplete, onBlocked }) {
+function ResultCard({ form, initialData, initialBlocked, onComplete, onBlocked, competitive }) {
   const [data, setData] = useState(initialData || null);
   const [blocked, setBlocked] = useState(!!initialBlocked);
   const [loading, setLoading] = useState(!initialData && !initialBlocked);
@@ -343,7 +343,7 @@ function ResultCard({ form, initialData, initialBlocked, onComplete, onBlocked }
         const res = await fetch("/api/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
+          body: JSON.stringify({ ...form, competitive: !!competitive }),
         });
         if (!res.ok) throw new Error("bad status");
         const json = await res.json();
@@ -437,6 +437,40 @@ function ResultCard({ form, initialData, initialBlocked, onComplete, onBlocked }
               </div>
             ))}</div>
           </div>
+          {data.competitivo && (
+            <div>
+              <SectionTitle n="04" t="Análisis competitivo (Meta Ads)" />
+              <p style={{ fontSize: 14, color: C.slate, lineHeight: 1.6, margin: "0 0 14px" }}>{data.competitivo.resumen}</p>
+              <div className="cf-grid2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+                <div style={{ border: `1px solid ${C.border}`, borderRadius: 12, padding: 14 }}>
+                  <div style={{ fontSize: 10.5, color: C.slate, textTransform: "uppercase", letterSpacing: .5, fontWeight: 700, marginBottom: 8 }}>Ya está saturado</div>
+                  {(data.competitivo.saturado || []).map((s, i) => (
+                    <div key={i} style={{ marginBottom: 5, paddingLeft: 16, position: "relative", fontSize: 13, color: C.slate, lineHeight: 1.5 }}><span style={{ position: "absolute", left: 0, color: "#E11D48" }}>×</span>{s}</div>
+                  ))}
+                </div>
+                <div style={{ border: `1px solid ${C.border}`, borderRadius: 12, padding: 14 }}>
+                  <div style={{ fontSize: 10.5, color: C.slate, textTransform: "uppercase", letterSpacing: .5, fontWeight: 700, marginBottom: 8 }}>Tu oportunidad</div>
+                  {(data.competitivo.oportunidades || []).map((s, i) => (
+                    <div key={i} style={{ marginBottom: 5, paddingLeft: 16, position: "relative", fontSize: 13, color: C.ink, lineHeight: 1.5 }}><span style={{ position: "absolute", left: 0, color: "#0E9F77" }}>✓</span>{s}</div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ fontSize: 11, color: C.slate, textTransform: "uppercase", letterSpacing: .5, fontWeight: 600, margin: "4px 0 8px" }}>Anuncios reales de la competencia (los que llevan más tiempo corriendo)</div>
+              <div style={{ display: "grid", gap: 10 }}>
+                {(data.competitivo.anuncios || []).map((ad, i) => (
+                  <div key={i} style={{ border: `1px solid ${C.border}`, borderRadius: 12, padding: 14 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
+                      <b style={{ color: C.navy, fontSize: 13.5 }}>{ad.pagina || "Anunciante"}</b>
+                      <span style={{ fontSize: 11, color: C.slate, whiteSpace: "nowrap" }}>desde {ad.inicio || "n/d"}</span>
+                    </div>
+                    {ad.titulo && <div style={{ fontSize: 13, fontWeight: 600, color: C.ink, marginBottom: 3 }}>{ad.titulo}</div>}
+                    {ad.copy && <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{ad.copy}</div>}
+                    {ad.link && <a href={ad.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, color: C.violet, fontWeight: 600, display: "inline-block", marginTop: 6 }}>Ver en Ad Library →</a>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <div style={{ marginTop: 16, padding: 28, borderRadius: 18, background: `linear-gradient(135deg, ${C.violet}, ${C.blue})`, textAlign: "center", color: "#fff" }}>
             <h3 className="cap-display" style={{ fontSize: 20, fontWeight: 700, margin: "0 0 8px" }}>¿Quieres la campaña completa?</h3>
             <p style={{ fontSize: 13.5, margin: "0 0 20px", lineHeight: 1.55, color: "rgba(255,255,255,.85)" }}>Te di 2 anuncios de muestra de tus {(data.angulos || []).length} ángulos. En una demo, Aria te arma la campaña completa: creativos para cada ángulo, Entity IDs y lanzamiento en Meta.</p>

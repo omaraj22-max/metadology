@@ -393,7 +393,7 @@ export default function Landing3Page() {
             Cada semana que corres campañas sin el ángulo correcto estás pagando el costo de no saber. Y ese costo, en publicidad, nunca para.
           </p>
           <div className="reveal" data-d="2" style={{ textAlign: "left", marginTop: "var(--s12)" }}>
-            <LeadMagnet wrapped={false} />
+            <LeadMagnet wrapped={false} competitive />
           </div>
           <p className="cta-micro reveal" data-d="3" style={{ marginTop: "var(--s12)" }}>
             Metadology no es para el que busca que alguien más le resuelva la vida. Es para el que quiere entender su negocio y moverlo con criterio.

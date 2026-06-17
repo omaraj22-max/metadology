@@ -48,6 +48,82 @@ async function recordLead(form) {
   }
 }
 
+// ===== Apify · Facebook Ads Library (análisis competitivo) =====
+const APIFY_TOKEN = process.env.APIFY_TOKEN || "";
+const APIFY_ACTOR = "automation-lab~facebook-ads-library";
+
+// Trae hasta 10 anuncios activos de la competencia (México) para el nicho del producto.
+// Fail-soft: si no hay token o falla, devuelve [] y el análisis competitivo se omite.
+async function fetchCompetitorAds(producto) {
+  if (!APIFY_TOKEN || !producto) return [];
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 45000);
+  try {
+    const res = await fetch(
+      `https://api.apify.com/v2/acts/${APIFY_ACTOR}/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          searchQueries: [String(producto).slice(0, 80)],
+          country: "MX",
+          activeStatus: "active",
+          mediaType: "all",
+          maxAds: 10,
+        }),
+        signal: controller.signal,
+      }
+    );
+    if (!res.ok) return [];
+    const items = await res.json();
+    if (!Array.isArray(items)) return [];
+    const clean = items
+      .map((it) => ({
+        pagina: it.pageName || "",
+        inicio: it.startDate || "",
+        activo: it.isActive !== false,
+        titulo: it.title || "",
+        copy: String(it.bodyText || "").slice(0, 400),
+        cta: it.ctaText || "",
+        link: it.adLibraryUrl || "",
+        plataformas: Array.isArray(it.platforms) ? it.platforms : [],
+      }))
+      .filter((a) => a.copy || a.titulo);
+    // Más antiguos primero = los que llevan más tiempo corriendo (probables ganadores)
+    clean.sort((a, b) => (a.inicio || "9999").localeCompare(b.inicio || "9999"));
+    return clean.slice(0, 10);
+  } catch (e) {
+    return [];
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function competitiveSystem(ads, { producto, problema }) {
+  const adsText = ads
+    .map(
+      (a, i) =>
+        `#${i + 1} [${a.pagina || "anunciante"}, activo desde ${a.inicio || "n/d"}] ${
+          a.titulo ? a.titulo + " — " : ""
+        }${a.copy}`
+    )
+    .join("\n");
+  return `Eres Aria, estratega de Caperifai. Te paso anuncios REALES de la competencia en Meta (México) para el nicho "${producto}", ordenados del más antiguo al más nuevo. Los más antiguos llevan más tiempo corriendo, así que probablemente son ganadores que ya pasaron la prueba del mercado.
+
+ANUNCIOS DE LA COMPETENCIA:
+${adsText}
+
+Cliente: vende "${producto}"; resuelve "${problema}".
+
+TAREA: Devuelve ÚNICAMENTE JSON válido (sin markdown, sin backticks):
+{
+  "resumen": "1-2 líneas: qué patrón se repite en la competencia y qué te dice",
+  "saturado": ["mensaje/ángulo que ya usan varios (evítalo o supéralo)", "..."],
+  "oportunidades": ["hueco que nadie ataca y el cliente sí puede explotar", "..."]
+}
+Sé concreto y accionable. Español LATAM cercano. 3-4 ítems máximo por lista.`;
+}
+
 function buildSystem({ producto, empresa, problema, link }) {
   return `Eres Aria, el copiloto de IA de Caperifai, operando con la metodología METADOLOGY ADS para campañas de Meta.
 
@@ -138,10 +214,16 @@ export async function POST(req) {
   }
 
   const client = new Anthropic({ apiKey });
+  const model = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
 
   try {
-    const msg = await client.messages.create({
-      model: process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6",
+    // El análisis principal y el scraping de la competencia (si aplica) corren en paralelo.
+    const wantsCompetitive = !!form.competitive;
+    const adsPromise = wantsCompetitive
+      ? fetchCompetitorAds(producto)
+      : Promise.resolve([]);
+    const mainPromise = client.messages.create({
+      model,
       max_tokens: 3000,
       system: buildSystem(form),
       messages: [
@@ -152,6 +234,8 @@ export async function POST(req) {
         },
       ],
     });
+
+    const [ads, msg] = await Promise.all([adsPromise, mainPromise]);
 
     const text = msg.content
       .filter((b) => b.type === "text")
@@ -170,6 +254,32 @@ export async function POST(req) {
       );
     }
 
+    // Análisis competitivo (solo /landing-3): si trajimos anuncios reales, Aria los analiza.
+    if (wantsCompetitive && ads.length) {
+      try {
+        const compMsg = await client.messages.create({
+          model,
+          max_tokens: 1200,
+          system: competitiveSystem(ads, form),
+          messages: [
+            {
+              role: "user",
+              content: "Genera el análisis competitivo en el JSON especificado.",
+            },
+          ],
+        });
+        const compText = compMsg.content
+          .filter((b) => b.type === "text")
+          .map((b) => b.text)
+          .join("\n")
+          .replace(/```json|```/g, "")
+          .trim();
+        const comp = JSON.parse(compText);
+        data.competitivo = { ...comp, anuncios: ads };
+      } catch (e) {
+        // si falla, devolvemos el análisis normal sin la sección competitiva
+      }
+    }
 
     return Response.json(data);
   } catch (e) {
