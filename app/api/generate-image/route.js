@@ -1,5 +1,5 @@
 export const runtime = "nodejs";
-export const maxDuration = 120;
+export const maxDuration = 300; // GPT Image 2 puede tardar; Fluid Compute permite hasta 300s
 
 // fal.ai. Modelo configurable por env. Default: GPT Image 2 de OpenAI en fal.
 const FAL_MODEL = process.env.FAL_IMAGE_MODEL || "openai/gpt-image-2";
@@ -59,10 +59,10 @@ export async function POST(req) {
       return Response.json({ error: "fal no devolvió status/response url." }, { status: 502 });
     }
 
-    // 2) Polling del estado (cada 2.5s, máx ~100s).
+    // 2) Polling del estado (cada 3s, máx ~270s).
     let done = false;
-    for (let i = 0; i < 40; i++) {
-      await sleep(2500);
+    for (let i = 0; i < 90; i++) {
+      await sleep(3000);
       const st = await jget(statusUrl, headers).catch(() => null);
       const status = st?.json?.status;
       if (status === "COMPLETED") { done = true; break; }

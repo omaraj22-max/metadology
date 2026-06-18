@@ -642,7 +642,7 @@ function AdImage({ prompt }) {
     <AdField label="Anuncio propuesto">
       {loading && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "28px 0", justifyContent: "center", background: C.surfaceAlt, border: `1px solid ${C.borderSoft}`, borderRadius: 10 }}>
-          <span className="cap-spin" /><span style={{ fontSize: 12.5, color: C.slate }}>Generando imagen…</span>
+          <span className="cap-spin" /><span style={{ fontSize: 12.5, color: C.slate, textAlign: "center", maxWidth: 280 }}>Generando el anuncio… puede tardar 1-2 minutos.</span>
         </div>
       )}
       {!loading && url && (
