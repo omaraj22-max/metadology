@@ -356,14 +356,14 @@ function MultiStepForm({ form, setForm, onReveal, onBlocked }) {
               <div className="cf-fade" style={{ position: "relative", margin: "-8px -8px 0", minHeight: 500 }}>
                 {/* Fondo: el análisis ya trabajado, BORROSO (o un esqueleto mientras se genera). */}
                 <div aria-hidden="true" style={{ position: "absolute", inset: 0, overflow: "hidden", borderRadius: 18, maxHeight: 640 }}>
-                  <div style={{ filter: "blur(7px)", opacity: 0.6, pointerEvents: "none", userSelect: "none", transform: "scale(1.03)" }}>
+                  <div style={{ filter: "blur(3px)", opacity: 0.92, pointerEvents: "none", userSelect: "none", transform: "scale(1.01)" }}>
                     {previewData ? (
                       <ResultBody data={previewData} form={form} goCheckout={() => {}} checkoutLoading={false} />
                     ) : (
                       <ResultSkeleton />
                     )}
                   </div>
-                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(248,250,252,.55) 0%, rgba(248,250,252,.82) 55%, rgba(248,250,252,.96) 100%)" }} />
+                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(248,250,252,.18) 0%, rgba(248,250,252,.42) 55%, rgba(248,250,252,.72) 100%)" }} />
                 </div>
 
                 {/* Frente: la puerta de contacto que desbloquea el análisis. */}
