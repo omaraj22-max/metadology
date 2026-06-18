@@ -225,9 +225,9 @@ ${list}`;
 
 function promptFieldInstruction(visualRefs) {
   if (visualRefs) {
-    return `prompt self-contained para generar el estático. La DIRECCIÓN VISUAL debe combinar: (a) el MOODBOARD de la marca del cliente —paleta, tipografía, estilo y mood que infieres del logo e imágenes de su sitio adjuntas— y (b) el formato/composición de los anuncios de la competencia que eligió. El estático debe verse ON-BRAND (con la identidad del cliente) y a la altura de esos anuncios, adaptado al mensaje del cliente (no copies sus textos). Describe la escena/composición, la paleta exacta, la tipografía y el titular, e incluye TODO el texto que va baked-in entre comillas tal cual. Cierra con: No inventes textos extra.`;
+    return `prompt self-contained para generar el estático. La DIRECCIÓN VISUAL debe combinar: (a) el MOODBOARD de la marca del cliente —paleta, tipografía, estilo y mood que infieres del logo e imágenes de su sitio adjuntas— y (b) el formato/composición de los anuncios de la competencia que eligió. El estático debe verse ON-BRAND (con la identidad del cliente) y a la altura de esos anuncios, adaptado al mensaje del cliente (no copies sus textos). Describe la escena/composición, la paleta exacta, la tipografía y el titular, e incluye TODO el texto que va baked-in entre comillas tal cual. IMPORTANTE: NO incluyas ningún logotipo ni el nombre de la marca como elemento gráfico; sin logos ni marcas de agua (usa la identidad visual —colores, estilo, tipografía— pero NO renderices el logo). Cierra con: No inventes textos extra ni logos.`;
   }
-  return `prompt self-contained para generar el estático: escena fotográfica premium (NO vector plano, NO fondo oscuro salvo marca), luminoso y aireado; describe la composición, la palabra-fantasma gigante ghosted de fondo si aplica, el titular limpio con keyword en color de acento, y TODO el texto que va baked-in entre comillas tal cual. Cierra con: No inventes textos extra.`;
+  return `prompt self-contained para generar el estático: escena fotográfica premium (NO vector plano, NO fondo oscuro salvo marca), luminoso y aireado; describe la composición, la palabra-fantasma gigante ghosted de fondo si aplica, el titular limpio con keyword en color de acento, y TODO el texto que va baked-in entre comillas tal cual. NO incluyas logotipos ni marcas de agua. Cierra con: No inventes textos extra ni logos.`;
 }
 
 function buildSystem({ producto, empresa, problema, link }, selectedAds, visualRefs) {
@@ -279,7 +279,7 @@ RESPONDE ÚNICAMENTE CON JSON VÁLIDO, sin markdown, sin backticks, sin texto an
       "copy_out": "copy del anuncio siguiendo Hook→Valor→Oferta: arranca con el hook que filtra, agita el dolor, mata una objeción con autoridad/bandera, cierra con urgencia + CTA. 3-5 líneas, español LATAM, listo para pegar en Meta.",
       "titulo": "titular corto del anuncio (headline del placement, máx ~40 caracteres)",
       "prompt": "${promptFieldInstruction(visualRefs)}",
-      "prompt_chatgpt": "prompt en español para que el USUARIO lo pegue en ChatGPT SUBIENDO una foto de su producto. Debe empezar con algo como 'Con la foto de mi producto que adjunto, crea un anuncio estático para Meta...' y describir: cómo integrar EL PRODUCTO DE LA FOTO en la escena (no inventar otro producto), la composición, el estilo on-brand, el titular y TODO el texto baked-in entre comillas. Cierra con: usa exactamente el producto de la foto adjunta, no lo reemplaces."
+      "prompt_chatgpt": "prompt en español para que el USUARIO lo pegue en ChatGPT SUBIENDO una foto de su producto. Debe empezar con algo como 'Con la foto de mi producto que adjunto, crea un anuncio estático para Meta...' y describir: cómo integrar EL PRODUCTO DE LA FOTO en la escena (no inventar otro producto), la composición, el estilo on-brand, el titular y TODO el texto baked-in entre comillas. NO agregues logotipos ni marcas de agua. Cierra con: usa exactamente el producto de la foto adjunta, no lo reemplaces, y no agregues logos."
     }
   ]
 }
