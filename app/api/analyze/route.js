@@ -125,7 +125,24 @@ TAREA: Devuelve ÚNICAMENTE JSON válido (sin markdown, sin backticks):
 Sé concreto y accionable. Español LATAM cercano. 3-4 ítems máximo por lista.`;
 }
 
-function buildSystem({ producto, empresa, problema, link }) {
+function adsReference(selectedAds) {
+  if (!selectedAds || !selectedAds.length) return "";
+  const list = selectedAds
+    .map(
+      (a, i) =>
+        `#${i + 1} [${a.pagina || "anunciante"}${a.inicio ? ", desde " + a.inicio : ""}] ${
+          a.titulo ? a.titulo + " — " : ""
+        }${a.copy || ""}`
+    )
+    .join("\n");
+  return `
+
+REFERENCIA VISUAL DE LA COMPETENCIA: el usuario seleccionó estos anuncios de su competencia que le gustaron. En el campo "prompt" de cada anuncio, INSPÍRATE en su estilo visual / formato / composición para que el resultado se sienta del mismo nivel, PERO con el mensaje y el ángulo diferenciados del cliente (no copies su copy). Supéralos.
+ANUNCIOS DE REFERENCIA:
+${list}`;
+}
+
+function buildSystem({ producto, empresa, problema, link }, selectedAds) {
   return `Eres Aria, el copiloto de IA de Caperifai, operando con la metodología METADOLOGY ADS para campañas de Meta.
 
 PREMISA CENTRAL: Meta premia darle a la IA muchos ángulos GENUINAMENTE distintos para emparejar cada mensaje con el usuario correcto. Un concepto realmente distinto = 1 Entity ID = 1 boleto a la subasta. Todo empieza en el mensaje.
@@ -178,7 +195,7 @@ RESPONDE ÚNICAMENTE CON JSON VÁLIDO, sin markdown, sin backticks, sin texto an
   ]
 }
 
-REGLA ANUNCIOS: genera EXACTAMENTE 2 anuncios estáticos de muestra, de 2 ángulos distintos (uno frío, uno medio). El copy_out aplica la fórmula completa Hook→Valor→Oferta. Son muestra: NO generes anuncios para todos los ángulos.`;
+REGLA ANUNCIOS: genera EXACTAMENTE 2 anuncios estáticos de muestra, de 2 ángulos distintos (uno frío, uno medio). El copy_out aplica la fórmula completa Hook→Valor→Oferta. Son muestra: NO generes anuncios para todos los ángulos.${adsReference(selectedAds)}`;
 }
 
 export async function POST(req) {
@@ -218,16 +235,16 @@ export async function POST(req) {
   const client = new Anthropic({ apiKey });
   const model = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
 
+  // Anuncios de competencia que el usuario seleccionó (vienen del paso de selección).
+  const selectedAds = Array.isArray(form.selectedAds)
+    ? form.selectedAds.slice(0, 12)
+    : [];
+
   try {
-    // El análisis principal y el scraping de la competencia (si aplica) corren en paralelo.
-    const wantsCompetitive = !!form.competitive;
-    const adsPromise = wantsCompetitive
-      ? fetchCompetitorAds(producto)
-      : Promise.resolve([]);
-    const mainPromise = client.messages.create({
+    const msg = await client.messages.create({
       model,
       max_tokens: 3000,
-      system: buildSystem(form),
+      system: buildSystem(form, selectedAds),
       messages: [
         {
           role: "user",
@@ -236,8 +253,6 @@ export async function POST(req) {
         },
       ],
     });
-
-    const [ads, msg] = await Promise.all([adsPromise, mainPromise]);
 
     const text = msg.content
       .filter((b) => b.type === "text")
@@ -256,14 +271,14 @@ export async function POST(req) {
       );
     }
 
-    // Análisis competitivo (solo /landing-3): si trajimos anuncios reales, Aria los analiza.
-    if (wantsCompetitive && ads.length) {
+    // Análisis competitivo sobre los anuncios que el usuario seleccionó (solo /landing-3).
+    if (selectedAds.length) {
       try {
         const compMsg = await client.messages.create({
           // Haiku: más rápido/barato; suficiente para resumir anuncios. Mantiene el total bajo 60s.
           model: process.env.ANTHROPIC_COMPETITIVE_MODEL || "claude-haiku-4-5-20251001",
           max_tokens: 1200,
-          system: competitiveSystem(ads, form),
+          system: competitiveSystem(selectedAds, form),
           messages: [
             {
               role: "user",
@@ -278,7 +293,7 @@ export async function POST(req) {
           .replace(/```json|```/g, "")
           .trim();
         const comp = JSON.parse(compText);
-        data.competitivo = { ...comp, anuncios: ads };
+        data.competitivo = { ...comp, anuncios: selectedAds };
       } catch (e) {
         // si falla, devolvemos el análisis normal sin la sección competitiva
       }

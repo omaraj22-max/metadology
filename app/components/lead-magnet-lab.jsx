@@ -56,9 +56,11 @@ const thc = { padding: "11px 15px", textAlign: "left", fontSize: 11, color: C.sl
 // LAB (solo /landing-3): competitivo SIEMPRE activo + SIN candado (para poder probar el
 // flujo repetidamente con el mismo correo). No persiste ni revisa localStorage/Sheet.
 export function LeadMagnetLab({ wrapped = true } = {}) {
-  const [stage, setStage] = useState("form");
+  const [stage, setStage] = useState("form"); // form | ads | result
   const [form, setForm] = useState({ nombre: "", correo: "", telefono: "", empresa: "", producto: "", link: "", problema: "" });
+  const [selectedAds, setSelectedAds] = useState([]);
 
+  // Al terminar el form → paso de selección de anuncios de la competencia
   const submit = () => {
     try {
       if (typeof window !== "undefined") {
@@ -67,29 +69,41 @@ export function LeadMagnetLab({ wrapped = true } = {}) {
         window.dataLayer.push({ event: "lead_submit" });
       }
     } catch (e) {}
+    setStage("ads");
+  };
+
+  // El usuario eligió (o saltó) los anuncios → generar
+  const onAdsConfirm = (ads) => {
+    setSelectedAds(ads || []);
     setStage("result");
   };
 
   const reset = () => {
     setForm({ nombre: "", correo: "", telefono: "", empresa: "", producto: "", link: "", problema: "" });
+    setSelectedAds([]);
     setStage("form");
   };
 
-  const inner = stage === "form" ? (
-    <MultiStepForm form={form} setForm={setForm} onSubmit={submit} />
-  ) : (
-    <div style={{ maxWidth: 820, margin: "0 auto" }}>
-      <div style={{ textAlign: "center", marginBottom: 32 }}>
-        <Eyebrow>Tu análisis</Eyebrow>
-        <h2 className="cap-display" style={{ ...h2, fontSize: 34 }}>Descubre tus ángulos de venta</h2>
-        <p style={{ ...lead, margin: "14px auto 0" }}>Tu análisis gratis ya está listo. Agenda una demo para la campaña completa.</p>
+  let inner;
+  if (stage === "form") {
+    inner = <MultiStepForm form={form} setForm={setForm} onSubmit={submit} />;
+  } else if (stage === "ads") {
+    inner = <AdsSelection producto={form.producto} onConfirm={onAdsConfirm} />;
+  } else {
+    inner = (
+      <div style={{ maxWidth: 820, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <Eyebrow>Tu análisis</Eyebrow>
+          <h2 className="cap-display" style={{ ...h2, fontSize: 34 }}>Descubre tus ángulos de venta</h2>
+          <p style={{ ...lead, margin: "14px auto 0" }}>Adaptado a los anuncios de la competencia que elegiste.</p>
+        </div>
+        <ResultCard form={form} selectedAds={selectedAds} onComplete={() => {}} onBlocked={() => {}} />
+        <div style={{ textAlign: "center", marginTop: 18 }}>
+          <button onClick={reset} style={{ fontSize: 12.5, color: C.slate, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontFamily: "inherit" }}>↺ Probar con otro producto</button>
+        </div>
       </div>
-      <ResultCard form={form} competitive onComplete={() => {}} onBlocked={() => {}} />
-      <div style={{ textAlign: "center", marginTop: 18 }}>
-        <button onClick={reset} style={{ fontSize: 12.5, color: C.slate, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontFamily: "inherit" }}>↺ Probar con otro producto</button>
-      </div>
-    </div>
-  );
+    );
+  }
 
   if (!wrapped) return <div id="cap-leadmagnet" style={{ scrollMarginTop: 70 }}>{inner}</div>;
 
@@ -97,6 +111,84 @@ export function LeadMagnetLab({ wrapped = true } = {}) {
     <section id="cap-leadmagnet" style={{ background: `linear-gradient(180deg, ${C.bg}, ${C.bgAlt})`, padding: "72px 24px", scrollMarginTop: 70 }}>
       {inner}
     </section>
+  );
+}
+
+// =================== SELECCIÓN DE ANUNCIOS DE LA COMPETENCIA ===================
+function AdsSelection({ producto, onConfirm }) {
+  const [loading, setLoading] = useState(true);
+  const [ads, setAds] = useState([]);
+  const [sel, setSel] = useState({});
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/competitor-ads", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ producto }),
+        });
+        const json = await res.json();
+        setAds(Array.isArray(json.ads) ? json.ads : []);
+      } catch (e) {} finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const toggle = (i) => setSel((s) => ({ ...s, [i]: !s[i] }));
+  const chosen = ads.filter((_, i) => sel[i]);
+
+  return (
+    <div className="cap-pop" style={{ maxWidth: 820, margin: "0 auto", background: "#fff", border: `1px solid ${C.border}`, borderRadius: 22, padding: "28px 26px", boxShadow: "0 1px 2px rgba(15,23,42,.04), 0 30px 60px -30px rgba(15,23,42,.2)" }}>
+      <div style={{ textAlign: "center", marginBottom: 20 }}>
+        <Eyebrow>Paso extra</Eyebrow>
+        <h2 className="cap-display" style={{ ...h2, fontSize: 26 }}>Anuncios de tu competencia</h2>
+        <p style={{ ...lead, fontSize: 14.5, margin: "10px auto 0" }}>Elige los que más te gusten. Aria adaptará tus anuncios inspirándose en su estilo, pero con tu mensaje.</p>
+      </div>
+
+      {loading && (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 0", gap: 14 }}>
+          <span className="cap-spin" />
+          <span style={{ color: C.slate, fontSize: 13.5 }}>Buscando anuncios de la competencia en Meta…</span>
+        </div>
+      )}
+
+      {!loading && ads.length === 0 && (
+        <div style={{ textAlign: "center", padding: "24px 0" }}>
+          <p style={{ color: C.slate, fontSize: 14, lineHeight: 1.6, maxWidth: 460, margin: "0 auto 18px" }}>No encontramos anuncios de la competencia para este producto. Puedes continuar y Aria generará tus anuncios igual.</p>
+          <button className="cf-btn cf-btn--primary" onClick={() => onConfirm([])}>Generar mis anuncios <ArrowRight size={16} /></button>
+        </div>
+      )}
+
+      {!loading && ads.length > 0 && (
+        <>
+          <div style={{ display: "grid", gap: 10 }}>
+            {ads.map((ad, i) => (
+              <label key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start", border: `1.5px solid ${sel[i] ? C.violet : C.border}`, background: sel[i] ? "rgba(90,58,255,.04)" : "#fff", borderRadius: 12, padding: 12, cursor: "pointer", transition: "border-color .15s, background .15s" }}>
+                <input type="checkbox" checked={!!sel[i]} onChange={() => toggle(i)} style={{ marginTop: 3, width: 16, height: 16, accentColor: C.violet, flexShrink: 0 }} />
+                {ad.imagen ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={ad.imagen} alt="" style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 8, flexShrink: 0, border: `1px solid ${C.border}` }} />
+                ) : null}
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
+                    <b style={{ color: C.navy, fontSize: 13.5 }}>{ad.pagina || "Anunciante"}</b>
+                    {ad.inicio && <span style={{ fontSize: 11, color: C.slate, whiteSpace: "nowrap" }}>desde {ad.inicio}</span>}
+                  </div>
+                  {ad.titulo && <div style={{ fontSize: 13, fontWeight: 600, color: C.ink, marginTop: 2 }}>{ad.titulo}</div>}
+                  {ad.copy && <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.5, marginTop: 2, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{ad.copy}</div>}
+                </div>
+              </label>
+            ))}
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 20, gap: 12, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 12.5, color: C.slate }}>{chosen.length} seleccionado{chosen.length === 1 ? "" : "s"}</span>
+            <button className="cf-btn cf-btn--primary" onClick={() => onConfirm(chosen)}>Generar mis anuncios <ArrowRight size={16} /></button>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -308,7 +400,7 @@ function AriaCard({ step }) {
   );
 }
 
-function ResultCard({ form, initialData, initialBlocked, onComplete, onBlocked, competitive }) {
+function ResultCard({ form, initialData, initialBlocked, onComplete, onBlocked, selectedAds }) {
   const [data, setData] = useState(initialData || null);
   const [blocked, setBlocked] = useState(!!initialBlocked);
   const [loading, setLoading] = useState(!initialData && !initialBlocked);
@@ -320,7 +412,7 @@ function ResultCard({ form, initialData, initialBlocked, onComplete, onBlocked, 
         const res = await fetch("/api/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...form, competitive: !!competitive, test: true }),
+          body: JSON.stringify({ ...form, selectedAds: selectedAds || [], test: true }),
         });
         if (!res.ok) throw new Error("bad status");
         const json = await res.json();
