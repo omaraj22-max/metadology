@@ -121,19 +121,42 @@ function AdsSelection({ producto, onConfirm }) {
   const [sel, setSel] = useState({});
 
   useEffect(() => {
+    let cancelled = false;
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const post = async (body) => {
+      const res = await fetch("/api/competitor-ads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      return res.json();
+    };
     (async () => {
       try {
-        const res = await fetch("/api/competitor-ads", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ producto }),
-        });
-        const json = await res.json();
-        setAds(Array.isArray(json.ads) ? json.ads : []);
-      } catch (e) {} finally {
-        setLoading(false);
+        // 1) arranca el run async
+        const started = await post({ producto });
+        const runId = started && started.runId;
+        if (!runId) return; // sin token o no arrancó → estado vacío
+        // 2) polling hasta que termine (máx ~2.5 min)
+        for (let i = 0; i < 50 && !cancelled; i++) {
+          await sleep(3000);
+          if (cancelled) return;
+          const r = await post({ runId });
+          if (r && r.status === "SUCCEEDED") {
+            if (!cancelled) setAds(Array.isArray(r.ads) ? r.ads : []);
+            return;
+          }
+          if (r && r.status && ["FAILED", "ABORTED", "TIMED-OUT", "TIMED_OUT"].includes(r.status)) {
+            return; // terminó sin éxito → estado vacío
+          }
+        }
+      } catch (e) {
+        // estado vacío
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     })();
+    return () => { cancelled = true; };
   }, []);
 
   const toggle = (i) => setSel((s) => ({ ...s, [i]: !s[i] }));

@@ -15,7 +15,6 @@ function pick(obj, paths) {
 function normalizeDate(v) {
   if (v == null) return "";
   const s = String(v);
-  // unix seconds → YYYY-MM-DD
   if (/^\d{9,10}$/.test(s)) {
     const d = new Date(parseInt(s, 10) * 1000);
     return d.toISOString().slice(0, 10);
@@ -54,69 +53,66 @@ function mapAd(it) {
   };
 }
 
-async function runApify(producto, country) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 50000);
-  try {
-    const res = await fetch(
-      `https://api.apify.com/v2/acts/${APIFY_ACTOR}/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          searchQueries: [String(producto).slice(0, 80)],
-          country: country || "MX",
-          activeStatus: "active",
-          mediaType: "all",
-          maxAds: 12,
-        }),
-        signal: controller.signal,
-      }
-    );
-    const status = res.status;
-    let raw;
-    try { raw = await res.json(); } catch { raw = null; }
-    return { status, raw };
-  } finally {
-    clearTimeout(timer);
-  }
+// Arranca un run async (respuesta inmediata) y devuelve el runId.
+async function startRun(producto, country) {
+  const res = await fetch(`https://api.apify.com/v2/acts/${APIFY_ACTOR}/runs?token=${APIFY_TOKEN}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      searchQueries: [String(producto).slice(0, 80)],
+      country: country || "MX",
+      activeStatus: "active",
+      mediaType: "all",
+      maxAds: 10,
+    }),
+  });
+  const json = await res.json().catch(() => null);
+  return { runId: json?.data?.id || null, startStatus: res.status, startRaw: json };
 }
 
-async function handle(producto, country, debug) {
-  if (!APIFY_TOKEN) {
-    return Response.json({ ok: false, error: "Falta APIFY_TOKEN en el servidor.", ads: [] });
-  }
-  if (!producto) {
-    return Response.json({ ok: false, error: "Falta 'producto' / 'q'.", ads: [] });
-  }
+// Revisa el estado del run; si terminó, trae y mapea los anuncios.
+async function pollRun(runId, debug) {
+  const r = await fetch(`https://api.apify.com/v2/actor-runs/${runId}?token=${APIFY_TOKEN}`);
+  const j = await r.json().catch(() => null);
+  const status = j?.data?.status || "UNKNOWN";
+  if (status !== "SUCCEEDED") return { ok: true, status };
+  const di = await fetch(
+    `https://api.apify.com/v2/actor-runs/${runId}/dataset/items?token=${APIFY_TOKEN}&clean=true`
+  );
+  const items = await di.json().catch(() => null);
+  const arr = Array.isArray(items) ? items : [];
+  const ads = arr.map(mapAd).filter((a) => a.pagina || a.copy || a.titulo || a.imagen);
+  ads.sort((a, b) => (a.inicio || "9999").localeCompare(b.inicio || "9999"));
+  const out = { ok: true, status: "SUCCEEDED", count: ads.length, ads: ads.slice(0, 12) };
+  if (debug || ads.length === 0) out.debug = { rawCount: arr.length, rawSample: arr[0] || null };
+  return out;
+}
+
+async function handle({ producto, runId, country, debug }) {
+  if (!APIFY_TOKEN) return Response.json({ ok: false, error: "Falta APIFY_TOKEN en el servidor." });
   try {
-    const { status, raw } = await runApify(producto, country);
-    const items = Array.isArray(raw) ? raw : Array.isArray(raw?.items) ? raw.items : [];
-    const ads = items
-      .map(mapAd)
-      .filter((a) => a.pagina || a.copy || a.titulo || a.imagen);
-    ads.sort((a, b) => (a.inicio || "9999").localeCompare(b.inicio || "9999"));
-    const out = { ok: true, count: ads.length, ads: ads.slice(0, 12) };
-    if (debug || ads.length === 0) {
-      out.debug = {
-        apifyStatus: status,
-        rawCount: items.length,
-        rawSample: items[0] || raw || null,
-      };
-    }
-    return Response.json(out);
+    if (runId) return Response.json(await pollRun(runId, debug));
+    if (!producto) return Response.json({ ok: false, error: "Falta 'producto' / 'q'." });
+    const { runId: id, startStatus, startRaw } = await startRun(producto, country);
+    if (!id) return Response.json({ ok: false, error: "No se pudo iniciar el run de Apify.", startStatus, startRaw });
+    return Response.json({ ok: true, runId: id, status: "RUNNING" });
   } catch (e) {
-    return Response.json({ ok: false, error: String(e?.message || e), ads: [] });
+    return Response.json({ ok: false, error: String(e?.message || e) });
   }
 }
 
 export async function POST(req) {
-  let body = {};
-  try { body = await req.json(); } catch {}
-  return handle(body.producto || body.q, body.country, !!body.debug);
+  let b = {};
+  try { b = await req.json(); } catch {}
+  return handle({ producto: b.producto || b.q, runId: b.runId, country: b.country, debug: !!b.debug });
 }
 
 export async function GET(req) {
-  const url = new URL(req.url);
-  return handle(url.searchParams.get("q"), url.searchParams.get("country"), url.searchParams.get("debug") != null);
+  const u = new URL(req.url);
+  return handle({
+    producto: u.searchParams.get("q"),
+    runId: u.searchParams.get("runId"),
+    country: u.searchParams.get("country"),
+    debug: u.searchParams.get("debug") != null,
+  });
 }
