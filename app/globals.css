@@ -216,3 +216,10 @@ textarea.cf-input { resize: vertical; min-height: 128px; line-height: 1.5; }
   .cf-grid2 { grid-template-columns: 1fr !important; }
   .cf-mobile-steps { display: flex; }
 }
+/* En móvil los botones de acción del form ocupan todo el ancho (se ven cuadrados,
+   no chicos ni pegados a la orilla). Aplica al multistep y a filas .cf-actions. */
+@media (max-width: 640px) {
+  .cf-main .cf-btn--primary { width: 100%; }
+  .cf-actions { flex-direction: column !important; align-items: stretch !important; }
+  .cf-actions .cf-btn { width: 100%; }
+}

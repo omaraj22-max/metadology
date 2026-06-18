@@ -235,7 +235,7 @@ function AdsSelection({ ads, onConfirm }) {
               </label>
             ))}
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 20, gap: 12, flexWrap: "wrap" }}>
+          <div className="cf-actions" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 20, gap: 12, flexWrap: "wrap" }}>
             <span style={{ fontSize: 12.5, color: C.slate }}>{chosen.length} seleccionado{chosen.length === 1 ? "" : "s"}</span>
             <button className="cf-btn cf-btn--primary" onClick={() => onConfirm(chosen)}>Generar mis anuncios <ArrowRight size={16} /></button>
           </div>
