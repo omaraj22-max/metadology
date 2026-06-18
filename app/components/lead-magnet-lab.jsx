@@ -173,7 +173,7 @@ function AdsSelection({ producto, onConfirm }) {
       {loading && (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 0", gap: 14 }}>
           <span className="cap-spin" />
-          <span style={{ color: C.slate, fontSize: 13.5 }}>Buscando anuncios de la competencia en Meta…</span>
+          <span style={{ color: C.slate, fontSize: 13.5, textAlign: "center", maxWidth: 300 }}>Buscando anuncios de la competencia en Meta… esto puede tardar hasta 1 minuto.</span>
         </div>
       )}
 
