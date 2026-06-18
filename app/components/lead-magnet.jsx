@@ -94,9 +94,19 @@ export function LeadMagnet({ wrapped = true } = {}) {
     setStage("result");
   };
 
-  // El correo ya usó su análisis gratis: pasamos al estado bloqueado (upsell a la campaña).
+  // El correo ya usó su análisis gratis. NO regeneramos (1 gratis por persona). Si en ESTE
+  // navegador ya tiene un análisis guardado, se lo mostramos otra vez en vez del candado
+  // (mejor experiencia); si no hay nada guardado, sí mostramos el candado con el upsell.
   const block = () => {
     trackLead();
+    let cached = null;
+    try { const raw = JSON.parse(localStorage.getItem(LS_KEY) || "null"); if (raw && raw.data) cached = raw.data; } catch (e) {}
+    if (cached) {
+      setSavedData(cached);
+      try { localStorage.setItem(LS_KEY, JSON.stringify({ form, data: cached })); } catch (e) {}
+      setStage("result");
+      return;
+    }
     setSavedBlocked(true);
     try { localStorage.setItem(LS_KEY, JSON.stringify({ form, blocked: true })); } catch (e) {}
     setStage("result");

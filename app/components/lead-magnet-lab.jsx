@@ -92,6 +92,12 @@ export function LeadMagnetLab({ wrapped = true } = {}) {
     try { localStorage.setItem(LAB_KEY, JSON.stringify({ form, data })); } catch (e) {}
   };
   const handleBlocked = () => {
+    // Si ya tiene un análisis guardado en este navegador, conservarlo y mostrarlo
+    // (nunca pisar su resultado con un bloqueo).
+    try {
+      const raw = JSON.parse(localStorage.getItem(LAB_KEY) || "null");
+      if (raw && raw.data) { setSavedData(raw.data); return; }
+    } catch (e) {}
     setSavedBlocked(true);
     try { localStorage.setItem(LAB_KEY, JSON.stringify({ form, blocked: true })); } catch (e) {}
   };
@@ -490,7 +496,14 @@ function ResultCard({ form, initialData, initialBlocked, onComplete, onBlocked, 
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(json.error || `Error ${res.status}`);
-        if (json.blocked) { setBlocked(true); if (onBlocked) onBlocked(); return; }
+        if (json.blocked) {
+          // 1 gratis por persona: no regeneramos. Si en este navegador ya hay un análisis
+          // guardado, mostrarlo en vez del candado; si no, candado con upsell.
+          let cached = null;
+          try { const raw = JSON.parse(localStorage.getItem(LAB_KEY) || "null"); if (raw && raw.data) cached = raw.data; } catch (e) {}
+          if (cached) { setData(cached); } else { setBlocked(true); if (onBlocked) onBlocked(); }
+          return;
+        }
         if (json.error) throw new Error(json.error);
         setData(json);
         if (onComplete) onComplete(json);
