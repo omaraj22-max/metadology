@@ -1,422 +1,417 @@
 "use client";
 
 import React, { useEffect } from "react";
-import "../components/landing2.css";
+import "./caperifai-landing.css";
 import { LeadMagnetLab } from "../components/lead-magnet-lab";
 
 export default function Landing3Page() {
   // Reveal on scroll
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      document.querySelectorAll(".reveal").forEach((el) => el.classList.add("in"));
+      document.querySelectorAll(".cfl3 .reveal").forEach((el) => el.classList.add("in"));
       return;
     }
     const io = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
-          if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+          if (e.isIntersecting) {
+            e.target.classList.add("in");
+            io.unobserve(e.target);
+          }
         });
       },
-      { threshold: 0.08, rootMargin: "0px 0px -24px 0px" }
+      { threshold: 0.12 }
     );
-    document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
+    document.querySelectorAll(".cfl3 .reveal").forEach((el) => io.observe(el));
     return () => io.disconnect();
   }, []);
 
+  const copyPrompt = (e) => {
+    const pre = e.currentTarget.closest(".ad-prompt")?.querySelector("pre");
+    if (!pre) return;
+    try {
+      navigator.clipboard.writeText(pre.textContent || "");
+      const btn = e.currentTarget;
+      const prev = btn.textContent;
+      btn.textContent = "Copiado ✓";
+      setTimeout(() => { btn.textContent = prev; }, 1400);
+    } catch (err) {}
+  };
+
   return (
-    <>
+    <div className="cfl3">
       {/* NAV */}
-      <nav className="nav">
-        <div className="wrap nav-inner">
-          <a href="/" className="nav-logo" aria-label="Caperifai inicio">
+      <header className="nav">
+        <div className="wrap nav-in">
+          <a className="logo" href="/" aria-label="Caperifai inicio">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="Caperifai" style={{ height: 28, width: "auto", display: "block" }} />
+            <img className="logo-img" src="/logo.png" alt="Caperifai" />
           </a>
-          <nav className="nav-links" aria-label="Menu principal">
+          <nav className="nav-links">
             <a href="#problema">El problema</a>
             <a href="#funciona">Cómo funciona</a>
-            <a href="#beneficios">Qué recibes</a>
+            <a href="#gratis">Qué te llevas gratis</a>
+            <a href="#muestra">Ver una muestra real</a>
           </nav>
-          <a href="#cta" className="btn btn-primary btn-sm" style={{ whiteSpace: "nowrap" }}>
-            <span className="nav-cta-full">Generar mis ángulos gratis</span>
-            <span className="nav-cta-short">Probar gratis</span>
-          </a>
+          <div className="nav-cta">
+            <a href="#funciona" className="btn btn-ghost">Ver cómo funciona</a>
+            <a href="#cta" className="btn btn-primary">
+              <span className="nav-cta-full">Generar mis ángulos gratis</span>
+              <span className="nav-cta-short">Probar gratis</span>
+            </a>
+          </div>
         </div>
-      </nav>
+      </header>
 
       {/* HERO */}
       <section className="hero">
-        <div className="wrap">
-          <div className="hero-grid">
-            <div>
-              <div className="hero-eyebrow">
-                <span className="eyebrow-dot" aria-hidden="true"></span>
-                <span>Para pymes que corren Meta Ads sin resultados</span>
-              </div>
-
-              <h1 className="t-display hero-h1">
-                Tus anuncios no fallan<br />
-                por el algoritmo.<br />
-                <span className="grad-text">Fallan porque no le hablan a nadie.</span>
-              </h1>
-
-              <p className="t-body-lg hero-sub">
-                Dile a Aria qué vendes y obtén tus primeros 3 anuncios ganadores en 2 minutos, con los ángulos que mueven a tu cliente.
-              </p>
-
-              <div className="hero-actions">
-                <a href="#cta" className="btn btn-primary">
-                  Descubrir mis ángulos
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </a>
-                <a href="#funciona" className="btn btn-outline">Ver cómo funciona</a>
-              </div>
-
-              <div className="hero-trust">
-                <span className="trust-item">
-                  <span className="trust-check" aria-hidden="true">
-                    <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5L3.5 6.5L7.5 2.5" stroke="#2563EB" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                  </span>
-                  Sin tarjeta
-                </span>
-                <span className="trust-item">
-                  <span className="trust-check" aria-hidden="true">
-                    <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5L3.5 6.5L7.5 2.5" stroke="#2563EB" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                  </span>
-                  Sin contratos
-                </span>
-                <span className="trust-item">
-                  <span className="trust-check" aria-hidden="true">
-                    <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5L3.5 6.5L7.5 2.5" stroke="#2563EB" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                  </span>
-                  Resultado en 2 min
-                </span>
-              </div>
+        <div className="wrap hero-grid">
+          <div className="hero-copy">
+            <span className="tag"><span className="dot"></span>Para pymes que corren Meta Ads y no ven el retorno</span>
+            <h1>Tus anuncios no fallan por el algoritmo. Fallan porque no le hablan <em className="grad-text">a nadie</em>.</h1>
+            <p className="sub">Dile a Aria qué vendes y en 2 minutos te regresa tu buyer persona real, los ángulos que mueven a tu cliente y 2 anuncios completos listos para lanzar. Gratis, sin tarjeta. Tuyo aunque nunca vuelvas.</p>
+            <div className="hero-cta">
+              <a href="#cta" className="btn btn-primary btn-lg">Quiero mi diagnóstico gratis</a>
+              <a href="#funciona" className="btn btn-ghost btn-lg">Ver cómo funciona</a>
             </div>
+            <div className="trust">
+              <span><span className="chk">✓</span>Sin tarjeta</span>
+              <span><span className="chk">✓</span>Sin contratos</span>
+              <span><span className="chk">✓</span>Lo tienes en 2 minutos</span>
+            </div>
+          </div>
 
-            {/* Aria card */}
-            <div className="aria-wrap">
-              <div className="aria-card">
-                <div className="aria-header">
-                  <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.0625rem", fontWeight: 700, color: "var(--text-900)", letterSpacing: "-0.01em" }}>
-                    Esto es lo que obtienes gratis
-                  </h3>
-                </div>
-
-                <p className="aria-msg">
-                  Análisis de tu negocio y <strong>4 ángulos</strong> que tus anuncios no están usando.
-                </p>
-
-                <ul className="angles-list" aria-label="Ángulos de venta">
-                  <li className="angle-chip">
-                    <span className="chip-temp cold">Frío</span>
-                    <span className="chip-label">El que ya se cansó de la agencia</span>
-                  </li>
-                  <li className="angle-chip">
-                    <span className="chip-temp cold">Frío</span>
-                    <span className="chip-label">Estás pagando por adivinar</span>
-                  </li>
-                  <li className="angle-chip">
-                    <span className="chip-temp warm">Medio</span>
-                    <span className="chip-label">Tu competencia ya entendió a su cliente</span>
-                  </li>
-                  <li className="angle-chip">
-                    <span className="chip-temp warm">Medio</span>
-                    <span className="chip-label">Lo que tu reporte no te dice</span>
-                  </li>
-                </ul>
-
-                <div className="method-row" aria-label="Metodología">
-                  <span className="method-pill">Diversidad de ángulos</span>
-                  <span className="method-pill">Entity IDs</span>
-                  <span className="method-pill">Advantage+</span>
-                  <span className="method-pill">Message match</span>
-                </div>
+          <div className="hero-visual">
+            <div className="orb" aria-hidden="true"></div>
+            <div className="dash">
+              <div className="aria-bar">
+                <span className="aria-avatar">A</span>
+                <span className="aria-name">Aria</span>
+                <span className="aria-sub">· tu análisis para Fernández</span>
               </div>
-
-              <p style={{ fontSize: "0.75rem", color: "var(--text-400)", textAlign: "center", margin: "2px 0 0" }}>
-                Resultado promedio que obtienen nuestros clientes*
-              </p>
-              <div className="metrics-row" aria-label="Resultados de referencia">
-                <div className="metric-box">
-                  <div className="metric-val green">4.3x</div>
-                  <div className="metric-lbl">ROAS promedio</div>
-                </div>
-                <div className="metric-box">
-                  <div className="metric-val red">-38%</div>
-                  <div className="metric-lbl">Costo por lead</div>
-                </div>
-                <div className="metric-box">
-                  <div className="metric-val blue">2 min</div>
-                  <div className="metric-lbl">Para tu diagnóstico</div>
-                </div>
+              <div className="deliv-head"><span className="dh-num">01</span><span className="dh-t">Tu cliente ideal</span></div>
+              <div className="atable">
+                <div className="arow"><span className="ak">Perfil</span><span className="av">Valentina M., buscadora espiritual autodidacta</span></div>
+                <div className="arow"><span className="ak">Edad</span><span className="av">28-42</span></div>
+                <div className="arow"><span className="ak">Dolor principal</span><span className="av">“Llevo años visualizando y repitiendo afirmaciones… y nada cambia. Siento que me falta algo.”</span></div>
+                <div className="arow"><span className="ak">Objeción clave</span><span className="av">¿Esto es otro ebook genérico lleno de frases bonitas? Ya gasté en cursos que no funcionaron.</span></div>
               </div>
+              <div className="dash-foot"><span className="fdot"></span>Generado en 2 min · vista previa del entregable real</div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* PROBLEMA */}
-      <section id="problema" className="section sec-soft">
+      {/* FREE VALUE */}
+      <section className="free reveal" id="gratis">
         <div className="wrap">
-          <div className="problema-grid">
-            <div>
-              <div className="sec-header">
-                <span className="t-label reveal">El diagnóstico que nadie te hace</span>
-                <h2 className="t-h2 reveal" data-d="1">Cada mes sin el ángulo correcto estás financiando los experimentos de tu competencia.</h2>
+          <div className="sec-head">
+            <span className="eyebrow">No es una muestra recortada</span>
+            <h2>Esto es lo que entra a tu negocio, sin pagar un peso.</h2>
+            <p className="lead">Un plan que copias, pegas y pones a correr hoy. No teoría, no un reporte de métricas que ya tienes.</p>
+          </div>
+
+          <div className="free-cards">
+            <div className="fcard">
+              <div className="num">01</div>
+              <h3>Buyer persona real</h3>
+              <p>Quién saca la tarjeta: qué lo frena, qué lo activa y qué objeción tiene antes de pagar. No “hombres de 30 a 50”.</p>
+            </div>
+            <div className="fcard">
+              <div className="num">02</div>
+              <h3>Los ángulos que te faltan</h3>
+              <p>Aria detecta varias motivaciones de compra distintas en tu mercado. En el diagnóstico te entrega 2, ya listos.</p>
+              <div className="micro">Cada uno le habla a una razón distinta</div>
+            </div>
+            <div className="fcard">
+              <div className="num">03</div>
+              <h3>Hooks de los 3 segundos</h3>
+              <p>La frase que detiene el scroll y filtra al curioso del que sí tiene el problema que resuelves.</p>
+            </div>
+            <div className="fcard">
+              <div className="num">04</div>
+              <h3>2 anuncios completos</h3>
+              <p>Copy, titular, llamada a la acción y prompt de imagen. Algo que pones a correr hoy, no un PDF en descargas.</p>
+              <div className="micro">Listos para lanzar</div>
+            </div>
+          </div>
+
+          <div className="free-bridge">
+            <p><b>Estos 2 ángulos y estos 2 anuncios son la primera parte de tu sistema.</b> Cuando los veas funcionando, el resto del mapa (todos tus ángulos y todos tus anuncios listos para montar) está a un paso. Pero eso lo decides después. Primero, llévate esto.</p>
+            <a href="#cta" className="btn btn-primary">Generar mi diagnóstico gratis</a>
+          </div>
+
+          <div className="statband">
+            <div className="stat"><div className="n">4.3x</div><div className="d">ROAS promedio*</div></div>
+            <div className="stat"><div className="n">−38%</div><div className="d">costo por lead*</div></div>
+            <div className="stat"><div className="n">2 min</div><div className="d">para tu diagnóstico</div></div>
+          </div>
+          <p className="statnote">*Resultado promedio de clientes. Aria no garantiza resultados; hay variabilidad por múltiples factores.</p>
+        </div>
+      </section>
+
+      {/* SHOWCASE */}
+      <section className="showcase reveal" id="muestra">
+        <div className="wrap">
+          <div className="sec-head center">
+            <span className="eyebrow">Esto no es teoría. Esto es lo que recibes.</span>
+            <h2>Una muestra real del diagnóstico que Aria entrega.</h2>
+            <p className="lead">Tomado de un negocio real (un ebook de manifestación en LATAM). Tu cliente ideal, tus ángulos con hooks y un anuncio completo listo para copiar y pegar.</p>
+          </div>
+
+          <div className="show-stack">
+            {/* 01 cliente ideal */}
+            <div className="panel">
+              <div className="panel-top">
+                <div className="pt-l"><span className="pt-num">01</span><span className="pt-t">Tu cliente ideal</span></div>
+                <span className="pt-tag">Buyer persona</span>
               </div>
-              <div className="problema-copy reveal" data-d="2">
-                <p>Llevas meses corriendo campañas. Subes el presupuesto cuando baja el costo por clic, lo bajas cuando el CPM se dispara. Cambias la imagen, pruebas otro texto, ajustas la segmentación. El resultado no cambia.</p>
-                <p>Lo que pasa es que ningún anuncio puede funcionar si no parte del problema real de quien lo ve. No del problema que tú crees que tiene tu cliente, el que él mismo no siempre sabe nombrar, pero que lo lleva a comprar.</p>
-                <p><strong>Sin eso, da igual cuánto subas el presupuesto.</strong> Estás compitiendo en precio contra todos los demás que tampoco saben qué decir.</p>
+              <div className="panel-body">
+                <div className="atable" style={{ borderRadius: "var(--radius-sm)" }}>
+                  <div className="arow"><span className="ak">Perfil</span><span className="av">Valentina M., buscadora espiritual autodidacta</span></div>
+                  <div className="arow"><span className="ak">Edad</span><span className="av">28-42</span></div>
+                  <div className="arow"><span className="ak">Rol / decisión</span><span className="av">Ella decide sola; siente el dolor a diario cuando ve que su vida no cambia a pesar de que “hace todo bien”.</span></div>
+                  <div className="arow"><span className="ak">Dolor principal</span><span className="av">“Llevo años leyendo sobre la ley de atracción, visualizo, repito afirmaciones… y nada cambia. Siento que me falta algo o que no soy de las que logran manifestar.”</span></div>
+                  <div className="arow"><span className="ak">Lo que desea</span><span className="av">Sentir que tiene el control de su vida, atraer lo que desea de verdad y dejar de vivir en modo supervivencia esperando que algo cambie.</span></div>
+                  <div className="arow"><span className="ak">Objeción clave</span><span className="av">¿Esto es otro ebook genérico lleno de frases bonitas que no me da nada práctico? Ya gasté en cursos que no me funcionaron.</span></div>
+                  <div className="arow"><span className="ak">Dónde alcanzarlo</span><span className="av">Instagram Reels y TikTok consumiendo contenido de bienestar y desarrollo personal; también en grupos de Facebook de mujeres emprendedoras.</span></div>
+                </div>
               </div>
             </div>
-            <div>
-              <span className="t-label reveal" style={{ display: "block", marginBottom: "var(--s4)" }}>El ciclo del dolor</span>
-              <ul className="pain-steps" aria-label="Ciclo de frustración">
-                <li className="pain-step reveal" data-d="1">
-                  <div className="pain-num" aria-hidden="true">01</div>
-                  <div className="pain-content">
-                    <h4>El reporte llega puntual</h4>
-                    <p>Alcance, impresiones, flechas verdes. Abres tu cuenta de banco y los números no cuadran con ninguna de esas gráficas.</p>
+
+            {/* 02 angulos */}
+            <div className="panel">
+              <div className="panel-top">
+                <div className="pt-l"><span className="pt-num">02</span><span className="pt-t">Tus ángulos de venta</span></div>
+                <span className="pt-tag">Con hooks de 0-3s</span>
+              </div>
+              <div className="panel-body">
+                <table className="angles">
+                  <thead><tr><th>Ángulo</th><th>Temp.</th><th>Dolor</th><th>Hooks (0-3s)</th></tr></thead>
+                  <tbody>
+                    <tr>
+                      <td><div className="a-name">El paso que nadie te enseñó</div><div className="a-sub">No consciente del producto, sí del problema</div></td>
+                      <td><span className="temp frio">frío</span></td>
+                      <td className="a-pain">Hace todo lo que dicen los gurús y aun así no ve resultados concretos en su vida.</td>
+                      <td className="a-hooks">
+                        <div><span className="chev">›</span><span>Si visualizas todos los días y nada cambia, esto te explica por qué.</span></div>
+                        <div><span className="chev">›</span><span>El 90% que practica la ley de atracción comete este error sin saberlo.</span></div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><div className="a-name">La identidad que bloquea</div><div className="a-sub">Consciente del dolor emocional profundo</div></td>
+                      <td><span className="temp frio">frío</span></td>
+                      <td className="a-pain">En el fondo cree que “no es de las que tienen suerte” o que no merece más.</td>
+                      <td className="a-hooks">
+                        <div><span className="chev">›</span><span>¿Y si el problema no es tu técnica, sino lo que crees que mereces?</span></div>
+                        <div><span className="chev">›</span><span>Tu mente tiene un techo invisible que cancela todo lo que manifiestas.</span></div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><div className="a-name">Prueba real, no promesas</div><div className="a-sub">Consciente de soluciones; compara opciones</div></td>
+                      <td><span className="temp medio">medio</span></td>
+                      <td className="a-pain">Ya invirtió en cursos que la dejaron igual; desconfía de lo que suene a magia.</td>
+                      <td className="a-hooks">
+                        <div><span className="chev">›</span><span>Esto no es otro ebook de frases bonitas. Te explico qué lo hace diferente.</span></div>
+                        <div><span className="chev">›</span><span>Miles de mujeres en LATAM ya manifestaron con este método. Aquí está la diferencia.</span></div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 03 anuncio */}
+            <div className="panel">
+              <div className="panel-top">
+                <div className="pt-l"><span className="pt-num">03</span><span className="pt-t">Anuncio completo</span></div>
+                <span className="pt-tag">Copy + prompt de imagen</span>
+              </div>
+              <div className="panel-body">
+                <div className="ad">
+                  <div className="ad-meta"><span className="lbl">Anuncio 1</span><span className="ang">Ángulo: El paso que nadie te enseñó</span></div>
+                  <h4 className="ad-title">¿Por qué no te funciona la manifestación?</h4>
+                  <div className="ad-copy">
+                    <p>Si visualizas todos los días y nada cambia, esto te explica por qué.</p>
+                    <p>No es tu culpa. La mayoría de los métodos te enseñan la mitad del proceso y omiten el paso que activa la manifestación de verdad.</p>
+                    <p>El Ebook de Manifestación de Fernández te muestra, de forma práctica y paso a paso, qué estás haciendo bien y qué debes ajustar para empezar a ver resultados reales, sin rituales complicados ni años de práctica.</p>
+                    <p>Más de 5,000 mujeres en LATAM ya lo aplicaron. Tú puedes ser la siguiente.</p>
                   </div>
-                </li>
-                <li className="pain-step reveal" data-d="2">
-                  <div className="pain-num" aria-hidden="true">02</div>
-                  <div className="pain-content">
-                    <h4>Preguntas qué pasó</h4>
-                    <p>El algoritmo. El periodo de aprendizaje. La estacionalidad. Siempre hay una razón que no puedes verificar. La mensualidad, esa sí es puntual.</p>
+                  <div className="ad-link">→ Accede ahora antes de que suba el precio</div>
+                  <div className="ad-prompt">
+                    <div className="pp-top"><span className="pp-lbl">Prompt del estático</span><button type="button" className="pp-copy" onClick={copyPrompt}>Copiar</button></div>
+                    <pre>Fotografía lifestyle premium, luz natural cálida y aireada, fondo blanco roto con destellos dorados suaves. En el centro, una mujer latina de unos 30-35 años sentada en un escritorio minimalista, mirando hacia arriba con expresión de revelación y calma, sosteniendo un journal abierto. Detrás, en tipografía gigante ghosted color dorado muy tenue, la palabra ‘MANIFESTAR’. En la parte inferior, titular baked-in en sans-serif moderna, negrita, color carbón: ‘¿Por qué no te funciona la manifestación?’ con la palabra ‘funciona’ resaltada en dorado.</pre>
                   </div>
-                </li>
-                <li className="pain-step reveal" data-d="3">
-                  <div className="pain-num" aria-hidden="true">03</div>
-                  <div className="pain-content">
-                    <h4>Pruebas otra cosa</h4>
-                    <p>Otro creativo, otro freelancer, otra agencia. Sin el ángulo correcto, cualquier cambio es otra apuesta. Y las apuestas salen caras.</p>
-                  </div>
-                </li>
-              </ul>
+                </div>
+              </div>
             </div>
+          </div>
+
+          <p className="show-note"><b>Esto es lo que recibes gratis</b>, con tu propio producto y tu propio cliente. Los primeros 2 ángulos y 2 anuncios, listos para lanzar hoy.</p>
+          <div style={{ textAlign: "center", marginTop: 24 }}>
+            <a href="#cta" className="btn btn-primary btn-lg">Quiero el mío, es gratis</a>
           </div>
         </div>
       </section>
 
-      {/* POLARIZACION */}
-      <section className="section">
+      {/* PAIN / DIAGNOSIS */}
+      <section className="reveal" id="problema">
         <div className="wrap">
-          <div className="sec-header">
-            <span className="t-label reveal">Dos formas de hacer anuncios en Meta</span>
-            <h2 className="t-h2 reveal" data-d="1" style={{ maxWidth: "22ch" }}>Una es adivinar. La otra es saber.</h2>
-            <p className="t-body-lg reveal" data-d="2">La mayoría corre variaciones del mismo mensaje y espera que algo pegue. Meta premia al que conecta, al que le habla a una motivación específica con el ángulo exacto.</p>
+          <div className="sec-head">
+            <span className="eyebrow">El diagnóstico que nadie te hace</span>
+            <h2>Cada mes sin el ángulo correcto, estás financiando los experimentos de tu competencia.</h2>
           </div>
-          <div className="polar-grid reveal" data-d="1">
-            <div className="polar-card bad">
-              <span className="polar-tag bad">Los que adivinan</span>
-              <h3 className="t-h3">El mismo anuncio con distintas fotos</h3>
-              <p>Compiten por precio en una subasta sin fondo. En el fondo dicen lo mismo en cada anuncio: cómprame. Y Meta los castiga con CPMs más altos.</p>
-            </div>
-            <div className="polar-card good">
-              <span className="polar-tag good">Los que saben</span>
-              <h3 className="t-h3">Un ángulo para cada motivación</h3>
-              <p>Un ángulo distinto no es otra versión del anuncio: es hablarle a una razón diferente de compra. Eso es exactamente lo que Meta premia con menor costo por resultado.</p>
-            </div>
+          <div style={{ maxWidth: 760, marginBottom: 8 }}>
+            <p style={{ fontSize: "16.5px", color: "var(--slate)", marginBottom: 16 }}>Llevas meses corriendo campañas. Subes el presupuesto cuando baja el costo por clic, lo bajas cuando el CPM se dispara. Cambias la imagen, pruebas otro texto, ajustas la segmentación. El resultado no se mueve.</p>
+            <p style={{ fontSize: "16.5px", color: "var(--slate)", marginBottom: 16 }}>Ningún anuncio funciona si no parte del problema real de quien lo ve. No el que tú crees que tiene tu cliente: el que él mismo no sabe nombrar, pero que lo lleva a comprar.</p>
           </div>
-          <p className="polar-note reveal" data-d="2">Metadology es para los segundos. Si buscas optimizar lo que ya tienes sin cuestionarlo, esto no es para ti.</p>
+
+          <div className="cycle">
+            <div className="step"><div className="s-n">01</div><h4>El reporte llega puntual</h4><p>Alcance, impresiones, flechas verdes. Abres tu cuenta de banco y los números no cuadran con ninguna de esas gráficas.</p></div>
+            <div className="step"><div className="s-n">02</div><h4>Preguntas qué pasó</h4><p>El algoritmo. El aprendizaje. La estacionalidad. Siempre hay una razón que no puedes verificar. La mensualidad, esa sí es puntual.</p></div>
+            <div className="step"><div className="s-n">03</div><h4>Pruebas otra cosa</h4><p>Otro creativo, otro freelancer, otra agencia. Sin el ángulo correcto, cualquier cambio es otra apuesta. Y las apuestas salen caras.</p></div>
+          </div>
+          <p className="agita"><b>Sin eso, da igual cuánto subas el presupuesto.</b> Estás compitiendo por precio contra todos los que tampoco saben qué decir.</p>
         </div>
       </section>
 
-      {/* BAB */}
-      <section className="section sec-soft">
+      {/* COMPARE */}
+      <section className="bg-soft reveal">
         <div className="wrap">
-          <div className="sec-header">
-            <span className="t-label reveal">Antes y después</span>
-            <h2 className="t-h2 reveal" data-d="1" style={{ maxWidth: "24ch" }}>Hoy estás adivinando. En 2 minutos puedes saber exactamente qué decir.</h2>
+          <div className="sec-head">
+            <span className="eyebrow">Dos formas de hacer anuncios en Meta</span>
+            <h2>Una es adivinar. La otra es saber.</h2>
+            <p className="lead">Meta premia al que conecta: al que le habla a una motivación específica con el ángulo exacto.</p>
           </div>
-          <div className="bab-card reveal" data-d="1">
-            <div className="bab-sides">
-              <div className="bab-side">
-                <span className="bab-tag before">Antes</span>
-                <h3 className="t-h3">Cada campaña empieza desde cero</h3>
-                <p>Pruebas creativos, cambias copys, esperas resultados. Nadie sabe con certeza qué ángulo mueve a tu cliente.</p>
-              </div>
-              <div className="bab-arrow" aria-hidden="true">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <path d="M4 10h12M12 6l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
-              <div className="bab-side">
-                <span className="bab-tag after">Después</span>
-                <h3 className="t-h3">Tienes un mapa</h3>
-                <p>Sabes quién decide la compra. Qué miedo lo frena, qué aspiración lo empuja. Cada anuncio tiene un propósito claro. No estás adivinando.</p>
-              </div>
+          <div className="compare">
+            <div className="col bad">
+              <div className="label">Los que adivinan</div>
+              <h3>El mismo anuncio con distintas fotos</h3>
+              <p>Compiten por precio en una subasta sin fondo. En el fondo, cada anuncio dice lo mismo: cómprame. Y Meta los castiga con CPMs más altos.</p>
             </div>
-            <p className="bab-bridge"><strong>El puente es Aria.</strong> En un formulario corto le dices qué vendes y a quién. Ella cruza esa información con la metodología que Meta premia hoy y te regresa los ángulos que tus campañas necesitan.</p>
+            <div className="col good">
+              <div className="label">Los que saben</div>
+              <h3>Un ángulo para cada motivación</h3>
+              <p>Un ángulo distinto no es otra versión del anuncio: es hablarle a una razón de compra diferente. Eso es lo que Meta premia con menor costo por resultado.</p>
+            </div>
           </div>
+          <p className="flag">Caperifai es para los segundos. Si buscas solo retocar lo que ya tienes sin cuestionarlo, esto no es para ti.</p>
         </div>
       </section>
 
-      {/* COMO FUNCIONA */}
-      <section id="funciona" className="section">
+      {/* BEFORE / AFTER */}
+      <section className="reveal">
         <div className="wrap">
-          <div className="sec-header">
-            <span className="t-label reveal">El proceso</span>
-            <h2 className="t-h2 reveal" data-d="1" style={{ maxWidth: "26ch" }}>Un formulario corto. Un diagnóstico real. Algo que puedes lanzar hoy.</h2>
+          <div className="sec-head">
+            <span className="eyebrow">Antes y después</span>
+            <h2>Hoy estás adivinando. En 2 minutos puedes tener el mapa.</h2>
           </div>
-          <div className="steps-grid">
-            <div className="step-card reveal">
-              <div className="step-num" aria-hidden="true">1</div>
-              <h3 className="t-h3">Le dices qué vendes</h3>
-              <p>Tu producto, tu cliente, el problema que resuelves. Sin reuniones ni formularios interminables.</p>
-            </div>
-            <div className="step-card reveal" data-d="1">
-              <div className="step-num" aria-hidden="true">2</div>
-              <h3 className="t-h3">Aria hace el diagnóstico</h3>
-              <p>Mapea quién decide la compra y por qué. Construye tu buyer persona real y diseña los ángulos que atacan motivaciones distintas.</p>
-            </div>
-            <div className="step-card reveal" data-d="2">
-              <div className="step-num" aria-hidden="true">3</div>
-              <h3 className="t-h3">Recibes tu plan listo</h3>
-              <p>Buyer persona, 4-5 ángulos, hooks para los primeros 3 segundos y 2 anuncios completos. Listo para lanzar hoy, no teoría.</p>
-            </div>
+          <div className="ba">
+            <div className="b"><div className="tagn">Antes</div><h3>Cada campaña empieza desde cero</h3><p>Pruebas creativos, cambias copys, esperas. Nadie sabe con certeza qué ángulo mueve a tu cliente.</p></div>
+            <div className="b after"><div className="tagn">Después</div><h3>Tienes un mapa</h3><p>Sabes quién decide la compra. Qué miedo lo frena, qué aspiración lo empuja. Cada anuncio tiene un propósito. Dejas de adivinar.</p></div>
           </div>
+          <p className="bridge-line"><b>El puente es Aria.</b> En un formulario corto le dices qué vendes y a quién. Ella lo cruza con la metodología que Meta premia hoy y te regresa los ángulos que tus campañas necesitan, y los primeros 2 anuncios ya armados.</p>
         </div>
       </section>
 
-      {/* BENEFICIOS */}
-      <section id="beneficios" className="section sec-soft">
+      {/* PROCESS */}
+      <section className="bg-soft reveal" id="funciona">
         <div className="wrap">
-          <div className="sec-header">
-            <span className="t-label reveal">Lo que entra a tu negocio</span>
-            <h2 className="t-h2 reveal" data-d="1">Concreto. Sin teoría que nunca ejecutas.</h2>
+          <div className="sec-head">
+            <span className="eyebrow">El proceso</span>
+            <h2>Un formulario corto. Un diagnóstico real. Algo que lanzas hoy.</h2>
           </div>
-          <div className="bento-grid reveal" data-d="1">
-            <div className="bc span-7 featured">
-              <div className="bc-icon" aria-hidden="true">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <circle cx="10" cy="7" r="3" stroke="#2563EB" strokeWidth="1.5" />
-                  <path d="M4 18c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="#2563EB" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </div>
-              <h3 className="t-h3">Tu buyer persona de verdad</h3>
-              <p>No &quot;hombres de 30 a 50 interesados en tu categoría&quot;. El perfil de quien toma la decisión de compra: qué lo mantiene frenado, qué lo activa, qué objeción tiene antes de pagar. Para que dejes de hablarle a todo el mundo.</p>
-              <div className="bc-result">Cada peso pega donde importa</div>
-            </div>
-
-            <div className="bc span-5" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-              <div>
-                <div className="t-stat grad-text" aria-label="4 a 5 ángulos">4-5</div>
-                <h3 className="t-h3" style={{ marginTop: "var(--s3)" }}>Ángulos diferenciados</h3>
-              </div>
-              <p style={{ marginTop: "var(--s3)" }}>Cada uno apunta a una motivación distinta. Tu cliente no es una sola persona, es varios estados de ánimo que merecen mensajes distintos.</p>
-            </div>
-
-            <div className="bc span-4">
-              <div className="bc-icon" aria-hidden="true">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <path d="M3 5h14M3 10h8M3 15h5" stroke="#2563EB" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </div>
-              <h3 className="t-h3">Hooks de los primeros 3 segundos</h3>
-              <p>La frase que detiene el scroll y filtra al cliente correcto. No al curioso, al que ya tiene el problema que tú resuelves.</p>
-              <div className="bc-result">Enganchas a quien sí compra</div>
-            </div>
-
-            <div className="bc span-8">
-              <div className="bc-icon" aria-hidden="true">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <rect x="3" y="4" width="14" height="12" rx="2" stroke="#2563EB" strokeWidth="1.5" />
-                  <path d="M7 8h6M7 11.5h4" stroke="#2563EB" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </div>
-              <h3 className="t-h3">2 anuncios completos listos para lanzar</h3>
-              <p>Copy, titular, llamada a la acción y prompt de imagen. Algo que puedes poner a correr hoy, no un PDF de estrategia que termina en tu carpeta de descargas.</p>
-              <div className="bc-result">Lanzas hoy, no mañana</div>
-            </div>
+          <div className="proc">
+            <div className="pstep"><div className="pn">1</div><h4>Le dices qué vendes</h4><p>Tu producto, tu cliente, el problema que resuelves. Sin reuniones ni formularios eternos.</p></div>
+            <div className="pstep"><div className="pn">2</div><h4>Aria hace el diagnóstico</h4><p>Mapea quién decide la compra y por qué. Construye tu buyer persona real y diseña ángulos que atacan motivaciones distintas.</p></div>
+            <div className="pstep"><div className="pn">3</div><h4>Recibes tu plan listo</h4><p>Buyer persona, tus ángulos, hooks de los primeros 3 segundos y 2 anuncios completos. Para lanzar hoy, no teoría.</p></div>
           </div>
+          <p className="seed">Y cuando quieras el set completo (todos los ángulos y todos los anuncios listos para montar), Aria ya lo tiene preparado para ti.</p>
         </div>
       </section>
 
-      {/* POR QUE GRATIS */}
-      <section className="section">
+      {/* DELIVERABLES */}
+      <section className="reveal">
         <div className="wrap">
-          <div className="gratis-split">
-            <div>
-              <span className="t-label reveal" style={{ display: "block", marginBottom: "var(--s3)" }}>La pregunta obvia</span>
-              <h2 className="t-h2 reveal" data-d="1" style={{ marginBottom: "var(--s6)" }}>¿Por qué gratis?</h2>
-              <div className="gratis-copy reveal" data-d="2">
-                <p>Porque la mayoría nunca ha visto cómo se ve esto bien hecho.</p>
-                <p>No un reporte de métricas. No un &quot;análisis&quot; que es básicamente un copy-paste de tu brief. Un diagnóstico real de quién compra tu producto y por qué, con los ángulos específicos que tus campañas necesitan.</p>
-                <p>Te lo mostramos sin que pongas un peso. Si te sirve, y te va a servir, ya sabes dónde estamos cuando quieras ir más lejos.</p>
-                <p><strong>Lo único que cuesta seguir sin esto es lo que ya estás pagando cada mes en campañas que no convierten.</strong></p>
-              </div>
-              <a href="#cta" className="btn btn-primary reveal" data-d="3" style={{ marginTop: "var(--s8)" }}>
-                Empezar ahora, es gratis
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                  <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </a>
+          <div className="sec-head">
+            <span className="eyebrow">Lo que entra a tu negocio</span>
+            <h2>Concreto. Sin teoría que nunca ejecutas.</h2>
+          </div>
+          <div className="deliv">
+            <div className="dcard feature">
+              <h3>Tu buyer persona de verdad</h3>
+              <p>No “hombres de 30 a 50 interesados en tu categoría”. El perfil de quien toma la decisión: qué lo frena, qué lo activa, qué objeción tiene antes de pagar. Para que dejes de hablarle a todo el mundo.</p>
+              <div className="foot">Cada peso pega donde importa</div>
             </div>
-
-            <div className="cost-card reveal" data-d="1">
-              <p className="cost-header">Lo que ya estás pagando por no saber</p>
-              <div className="cost-row">
-                <span className="cost-lbl">Mensualidad agencia</span>
-                <span className="cost-val red">$15,000-$30,000</span>
-              </div>
-              <div className="cost-row">
-                <span className="cost-lbl">Presupuesto quemado</span>
-                <span className="cost-val red">Variable / mes</span>
-              </div>
-              <div className="cost-row">
-                <span className="cost-lbl">Horas en reportes sin retorno</span>
-                <span className="cost-val red">Sin resultado claro</span>
-              </div>
-              <div className="cost-row">
-                <span className="cost-lbl">Diagnóstico de Aria</span>
-                <span className="cost-val blue">Gratis. Ahora.</span>
-              </div>
+            <div className="dcard">
+              <div className="big">2</div>
+              <h3>Ángulos en acción</h3>
+              <p>Cada uno apunta a una motivación distinta. Tu cliente es varios estados de ánimo que merecen mensajes distintos.</p>
+              <div className="foot">Dejas de competir por precio</div>
+            </div>
+            <div className="dcard">
+              <h3>Hooks de 3 segundos</h3>
+              <p>La frase que detiene el scroll y filtra al cliente correcto. No al curioso: al que ya tiene el problema.</p>
+              <div className="foot">Enganchas a quien sí compra</div>
+            </div>
+            <div className="dcard span2">
+              <h3>2 anuncios completos, listos para lanzar</h3>
+              <p>Copy, titular, llamada a la acción y prompt de imagen. Algo que pones a correr hoy, no un PDF que termina en tu carpeta de descargas.</p>
+              <div className="foot">Lanzas hoy, no mañana</div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* CTA FINAL + FORMULARIO */}
-      <section id="cta" className="sec-cta">
-        <div className="wrap" style={{ position: "relative", zIndex: 1 }}>
-          <h2 className="t-h2 cta-h2 reveal" style={{ maxWidth: "24ch", marginInline: "auto" }}>
-            Deja de adivinar.<br />
-            <span className="grad-text">Empieza a saber.</span>
-          </h2>
-          <p className="t-body-lg cta-sub reveal" data-d="1">
-            Cada semana que corres campañas sin el ángulo correcto estás pagando el costo de no saber. Y ese costo, en publicidad, nunca para.
-          </p>
-          <div className="reveal" data-d="2" style={{ textAlign: "left", marginTop: "var(--s12)" }}>
-            <LeadMagnetLab wrapped={false} />
+      {/* WHY FREE */}
+      <section className="why reveal">
+        <div className="wrap inner">
+          <span className="eyebrow">La pregunta obvia</span>
+          <h2>¿Por qué te lo damos gratis?</h2>
+          <p>Porque la mayoría nunca ha visto cómo se ve esto bien hecho.</p>
+          <p>No un reporte de métricas. No un “análisis” que es tu mismo brief copiado y pegado. Un diagnóstico real de quién compra tu producto y por qué, con ángulos y anuncios que puedes lanzar hoy.</p>
+          <p>Te entregamos la primera parte completa para que la veas funcionar con tu propio dinero. Si te sirve, y te va a servir, ya sabrás que el set completo está a un paso, el día que quieras montarlo todo.</p>
+          <p className="big"><b>Lo único que cuesta seguir sin esto es lo que ya pagas cada mes en campañas que no convierten.</b></p>
+          <a href="#cta" className="btn btn-primary btn-lg">Empezar ahora, es gratis</a>
+
+          <div className="cost">
+            <div className="cost-row"><span className="k">Mensualidad de agencia</span><span className="v">$15,000 a $30,000</span></div>
+            <div className="cost-row"><span className="k">Presupuesto quemado</span><span className="v">Variable / mes</span></div>
+            <div className="cost-row"><span className="k">Horas en reportes sin retorno</span><span className="v">Sin resultado claro</span></div>
+            <div className="cost-row free-row"><span className="k">Diagnóstico de Aria</span><span className="v">Gratis. Ahora.</span></div>
           </div>
-          <p className="cta-micro reveal" data-d="3" style={{ marginTop: "var(--s12)" }}>
-            Metadology no es para el que busca que alguien más le resuelva la vida. Es para el que quiere entender su negocio y moverlo con criterio.
-          </p>
+        </div>
+      </section>
+
+      {/* FINAL CTA + FORM */}
+      <section className="final reveal" id="cta">
+        <div className="wrap inner">
+          <h2>Deja de adivinar. Empieza a saber.</h2>
+          <p>Cada semana que corres campañas sin el ángulo correcto pagas el costo de no saber. Y ese costo, en publicidad, nunca para.</p>
+          <p>Caperifai no es para quien busca que alguien más le resuelva la vida. Es para quien quiere entender su negocio y moverlo con criterio.</p>
+        </div>
+        <div className="wrap l3-form">
+          <LeadMagnetLab wrapped={false} />
         </div>
       </section>
 
       {/* FOOTER */}
-      <footer className="footer">
-        <div className="wrap footer-inner">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="Caperifai" style={{ height: 24, width: "auto", display: "block" }} />
-          <p className="footer-copy">2026 Caperifai. El copiloto de IA para tus campañas en Meta.</p>
-          <nav className="footer-links" aria-label="Links de footer">
-            <a href="/privacidad">Privacidad</a>
-            <a href="/terminos">Términos</a>
-            <a href="mailto:hola@caperif.ai">Contacto</a>
-          </nav>
+      <footer>
+        <div className="wrap">
+          <div className="foot-in">
+            <a className="logo" href="/" aria-label="Caperifai inicio">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className="logo-img" src="/logo.png" alt="Caperifai" />
+            </a>
+            <nav className="foot-links">
+              <a href="/privacidad">Privacidad</a>
+              <a href="/terminos">Términos</a>
+              <a href="mailto:hola@caperif.ai">Contacto</a>
+            </nav>
+          </div>
+          <p className="legal">2026 Caperifai · El copiloto de IA para tus campañas en Meta. *Resultados promedio. Aria no asegura ningún resultado; puede haber variabilidad por distintos factores.</p>
         </div>
-        <p className="wrap" style={{ marginTop: "var(--s4)", fontSize: "0.6875rem", lineHeight: 1.5, color: "var(--text-200)" }}>
-          *Resultados obtenidos promedio, Aria no asegura ningún resultado y puede haber variabilidad por diferentes factores.
-        </p>
       </footer>
-    </>
+    </div>
   );
 }
