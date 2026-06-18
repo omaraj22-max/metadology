@@ -1,5 +1,5 @@
-import Landing2View from "./components/landing2-view";
+import Landing3View from "./components/landing3-view";
 
 export default function Home() {
-  return <Landing2View />;
+  return <Landing3View />;
 }
