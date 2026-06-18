@@ -127,6 +127,15 @@ TAREA: Devuelve ÚNICAMENTE JSON válido (sin markdown, sin backticks):
 Sé concreto y accionable. Español LATAM cercano. 3-4 ítems máximo por lista.`;
 }
 
+// Detecta el formato real por los magic bytes (no confiar en el Content-Type del servidor).
+function sniffImageType(b) {
+  if (b.length >= 4 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return "image/png";
+  if (b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return "image/jpeg";
+  if (b.length >= 4 && b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38) return "image/gif";
+  if (b.length >= 12 && b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return "image/webp";
+  return "";
+}
+
 // Descarga una imagen y la devuelve como bloque base64 para Claude (visión). Falla suave.
 async function toImageBlock(url) {
   if (!url || !/^https?:\/\//i.test(url)) return null;
@@ -135,11 +144,11 @@ async function toImageBlock(url) {
   try {
     const res = await fetch(url, { signal: controller.signal, headers: { "User-Agent": "Mozilla/5.0" } });
     if (!res.ok) return null;
-    const ct = (res.headers.get("content-type") || "").split(";")[0].trim();
-    if (!["image/jpeg", "image/png", "image/gif", "image/webp"].includes(ct)) return null;
     const buf = Buffer.from(await res.arrayBuffer());
     if (!buf.length || buf.length > 4_500_000) return null; // límite ~5MB de Anthropic
-    return { type: "image", source: { type: "base64", media_type: ct, data: buf.toString("base64") } };
+    const mt = sniffImageType(buf); // formato real, no el del header
+    if (!mt) return null;
+    return { type: "image", source: { type: "base64", media_type: mt, data: buf.toString("base64") } };
   } catch (e) {
     return null;
   } finally {
