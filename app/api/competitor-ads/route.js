@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 120; // Fluid Compute activo permite más margen
 
 const APIFY_TOKEN = process.env.APIFY_TOKEN || "";
 const APIFY_ACTOR = "automation-lab~facebook-ads-library";

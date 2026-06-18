@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 120; // Fluid Compute activo permite más margen (Hobby: hasta 300s)
 
 // URL del Web App de Apps Script (Sheet). La env var tiene prioridad; si no está
 // configurada en Vercel, usamos este fallback para que los leads SIEMPRE se registren.
