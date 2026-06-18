@@ -57,7 +57,7 @@ const thc = { padding: "11px 15px", textAlign: "left", fontSize: 11, color: C.sl
 // flujo repetidamente con el mismo correo). No persiste ni revisa localStorage/Sheet.
 export function LeadMagnetLab({ wrapped = true } = {}) {
   const [stage, setStage] = useState("form"); // form | ads | result
-  const [form, setForm] = useState({ nombre: "", correo: "", telefono: "", empresa: "", producto: "", link: "", problema: "" });
+  const [form, setForm] = useState({ nombre: "", correo: "", telefono: "", empresa: "", producto: "", link: "", problema: "", pais: "MX" });
   const [selectedAds, setSelectedAds] = useState([]);
   const [ads, setAds] = useState(null); // null = buscando / no listo · array = resultado
   const prefetchRef = useRef(false);
@@ -67,7 +67,7 @@ export function LeadMagnetLab({ wrapped = true } = {}) {
 
   // Arranca la búsqueda en cuanto el usuario escribe el producto (paso 1) y hace polling
   // en segundo plano mientras llena los pasos 2 y 3 → al llegar a la selección, ya está listo.
-  const startPrefetch = async (producto) => {
+  const startPrefetch = async (producto, pais) => {
     if (prefetchRef.current || !producto) return;
     prefetchRef.current = true;
     const myToken = ++tokenRef.current;
@@ -78,7 +78,7 @@ export function LeadMagnetLab({ wrapped = true } = {}) {
       return res.json();
     };
     try {
-      const started = await post({ producto });
+      const started = await post({ producto, country: pais || "MX" });
       const runId = started && started.runId;
       if (!runId) { if (alive()) setAds([]); return; }
       for (let i = 0; i < 50 && alive(); i++) {
@@ -114,7 +114,7 @@ export function LeadMagnetLab({ wrapped = true } = {}) {
     tokenRef.current++;
     prefetchRef.current = false;
     setAds(null);
-    setForm({ nombre: "", correo: "", telefono: "", empresa: "", producto: "", link: "", problema: "" });
+    setForm({ nombre: "", correo: "", telefono: "", empresa: "", producto: "", link: "", problema: "", pais: "MX" });
     setSelectedAds([]);
     setStage("form");
   };
@@ -260,7 +260,7 @@ function MultiStepForm({ form, setForm, onSubmit, onProductoReady }) {
     // Prefetch de anuncios de la competencia: arranca al dejar el paso 1 (ya hay producto)
     if (step === 1 && !prefetchRef.current && form.producto.trim() && onProductoReady) {
       prefetchRef.current = true;
-      onProductoReady(form.producto.trim());
+      onProductoReady(form.producto.trim(), form.pais);
     }
     if (target === 3) track("form_step_3");
     setStep(target);
@@ -342,6 +342,27 @@ function MultiStepForm({ form, setForm, onSubmit, onProductoReady }) {
                 </Field>
                 <Field label="Link de tu landing, producto o página web">
                   <input className="cf-input" placeholder="https://tuempresa.com" value={form.link} onChange={set("link")} />
+                </Field>
+                <Field label="¿En qué país corres tus campañas?" required>
+                  <select className="cf-input" value={form.pais} onChange={set("pais")} style={{ appearance: "auto" }}>
+                    <option value="MX">México</option>
+                    <option value="US">Estados Unidos</option>
+                    <option value="AR">Argentina</option>
+                    <option value="CO">Colombia</option>
+                    <option value="CL">Chile</option>
+                    <option value="PE">Perú</option>
+                    <option value="EC">Ecuador</option>
+                    <option value="GT">Guatemala</option>
+                    <option value="ES">España</option>
+                    <option value="BR">Brasil</option>
+                    <option value="UY">Uruguay</option>
+                    <option value="PY">Paraguay</option>
+                    <option value="BO">Bolivia</option>
+                    <option value="CR">Costa Rica</option>
+                    <option value="PA">Panamá</option>
+                    <option value="DO">Rep. Dominicana</option>
+                    <option value="ALL">Todos</option>
+                  </select>
                 </Field>
               </StepShell>
             )}
@@ -527,9 +548,15 @@ function ResultCard({ form, initialData, initialBlocked, onComplete, onBlocked, 
               <div key={i} className="cap-adcard" style={{ border: `1px solid ${C.border}`, borderRadius: 16, overflow: "hidden" }}>
                 <div style={{ padding: "11px 16px", background: C.surfaceAlt, borderBottom: `1px solid ${C.borderSoft}`, display: "flex", justifyContent: "space-between" }}><span style={{ fontSize: 12, color: C.slate, fontWeight: 500 }}>Anuncio {i + 1}</span><span style={{ fontSize: 11, color: C.violet, fontWeight: 600 }}>Ángulo: {ad.angulo}</span></div>
                 <div style={{ padding: 18, display: "grid", gap: 14 }}>
+                  <AdImage prompt={ad.prompt} />
                   <AdField label="Título"><div className="cap-display" style={{ fontWeight: 600, fontSize: 16, color: C.navy }}>{ad.titulo}</div></AdField>
                   <AdField label="Copy"><div style={{ fontSize: 13.5, lineHeight: 1.6, whiteSpace: "pre-wrap", color: "#334155" }}>{ad.copy_out}</div></AdField>
                   <AdField label="Prompt del estático" copy={ad.prompt}><div style={{ fontSize: 12.5, lineHeight: 1.55, color: "#475569", whiteSpace: "pre-wrap", fontFamily: "ui-monospace, 'SF Mono', monospace", background: C.surfaceAlt, border: `1px solid ${C.borderSoft}`, borderRadius: 10, padding: "11px 13px" }}>{ad.prompt}</div></AdField>
+                  {ad.prompt_chatgpt && (
+                    <AdField label="Prompt para ChatGPT (sube la foto de tu producto)" copy={ad.prompt_chatgpt}>
+                      <div style={{ fontSize: 12.5, lineHeight: 1.55, color: "#475569", whiteSpace: "pre-wrap", fontFamily: "ui-monospace, 'SF Mono', monospace", background: C.surfaceAlt, border: `1px solid ${C.borderSoft}`, borderRadius: 10, padding: "11px 13px" }}>{ad.prompt_chatgpt}</div>
+                    </AdField>
+                  )}
                 </div>
               </div>
             ))}</div>
@@ -593,5 +620,38 @@ function SectionTitle({ n, t }) { return <div style={{ display: "flex", alignIte
 function AdField({ label, children, copy }) {
   const [copied, setCopied] = useState(false);
   const doCopy = () => { try { navigator.clipboard.writeText(copy); setCopied(true); setTimeout(() => setCopied(false), 1400); } catch (e) {} };
-  return <div><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}><div style={{ fontSize: 11, color: C.slate, textTransform: "uppercase", letterSpacing: .5, fontWeight: 600 }}>{label}</div>{copy && <button className="cap-ghost" onClick={doCopy} style={{ fontSize: 11, color: copied ? C.violet : C.slate, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 7, padding: "3px 10px", cursor: "pointer", fontFamily: "inherit", fontWeight: 500 }}>{copied ? "Copiado ✓" : "Copiar"}</button>}</div>{children}</div>;
+  return <div><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6, gap: 8 }}><div style={{ fontSize: 11, color: C.slate, textTransform: "uppercase", letterSpacing: .5, fontWeight: 600 }}>{label}</div>{copy && <button className="cap-ghost" onClick={doCopy} style={{ fontSize: 11, color: copied ? C.violet : C.slate, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 7, padding: "3px 10px", cursor: "pointer", fontFamily: "inherit", fontWeight: 500, whiteSpace: "nowrap" }}>{copied ? "Copiado ✓" : "Copiar"}</button>}</div>{children}</div>;
+}
+
+// Genera la imagen del estático con fal.ai a partir del prompt.
+function AdImage({ prompt }) {
+  const [url, setUrl] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+  const gen = async () => {
+    setLoading(true); setErr("");
+    try {
+      const res = await fetch("/api/generate-image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt }) });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json.error) throw new Error(json.error || `Error ${res.status}`);
+      setUrl(json.url);
+    } catch (e) { setErr(e?.message || "Error generando la imagen."); } finally { setLoading(false); }
+  };
+  useEffect(() => { gen(); }, []);
+  return (
+    <AdField label="Imagen generada (fal.ai)">
+      {loading && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "28px 0", justifyContent: "center", background: C.surfaceAlt, border: `1px solid ${C.borderSoft}`, borderRadius: 10 }}>
+          <span className="cap-spin" /><span style={{ fontSize: 12.5, color: C.slate }}>Generando imagen…</span>
+        </div>
+      )}
+      {!loading && url && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt="" style={{ width: "100%", borderRadius: 10, border: `1px solid ${C.border}`, display: "block" }} />
+      )}
+      {!loading && err && (
+        <div style={{ fontSize: 12.5, color: "#E11D48", lineHeight: 1.5 }}>No se pudo generar la imagen. <span style={{ color: C.slate }}>({err})</span> <button onClick={gen} style={{ color: C.violet, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 600, padding: 0 }}>Reintentar</button></div>
+      )}
+    </AdField>
+  );
 }

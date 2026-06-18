@@ -269,7 +269,8 @@ RESPONDE ÚNICAMENTE CON JSON VÁLIDO, sin markdown, sin backticks, sin texto an
       "angulo": "nombre del ángulo del que sale este anuncio (debe ser uno de los de arriba)",
       "copy_out": "copy del anuncio siguiendo Hook→Valor→Oferta: arranca con el hook que filtra, agita el dolor, mata una objeción con autoridad/bandera, cierra con urgencia + CTA. 3-5 líneas, español LATAM, listo para pegar en Meta.",
       "titulo": "titular corto del anuncio (headline del placement, máx ~40 caracteres)",
-      "prompt": "${promptFieldInstruction(visualRefs)}"
+      "prompt": "${promptFieldInstruction(visualRefs)}",
+      "prompt_chatgpt": "prompt en español para que el USUARIO lo pegue en ChatGPT SUBIENDO una foto de su producto. Debe empezar con algo como 'Con la foto de mi producto que adjunto, crea un anuncio estático para Meta...' y describir: cómo integrar EL PRODUCTO DE LA FOTO en la escena (no inventar otro producto), la composición, el estilo on-brand, el titular y TODO el texto baked-in entre comillas. Cierra con: usa exactamente el producto de la foto adjunta, no lo reemplaces."
     }
   ]
 }
