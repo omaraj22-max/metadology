@@ -76,7 +76,7 @@ export function LeadMagnet({ wrapped = true } = {}) {
     setReady(true);
   }, []);
 
-  const submit = () => {
+  const trackLead = () => {
     try {
       if (typeof window !== "undefined") {
         if (typeof window.fbq === "function") window.fbq("track", "Lead");
@@ -84,14 +84,29 @@ export function LeadMagnet({ wrapped = true } = {}) {
         window.dataLayer.push({ event: "lead_submit" });
       }
     } catch (e) {}
+  };
+
+  // El usuario entregó sus datos y el análisis (ya generado en preview) se desbloquea.
+  const reveal = (data) => {
+    trackLead();
+    setSavedData(data);
+    try { localStorage.setItem(LS_KEY, JSON.stringify({ form, data })); } catch (e) {}
     setStage("result");
   };
 
+  // El correo ya usó su análisis gratis: pasamos al estado bloqueado (upsell a la campaña).
+  const block = () => {
+    trackLead();
+    setSavedBlocked(true);
+    try { localStorage.setItem(LS_KEY, JSON.stringify({ form, blocked: true })); } catch (e) {}
+    setStage("result");
+  };
+
+  // Fallbacks por si ResultCard llegara a autogenerar (no ocurre en el flujo preview).
   const handleComplete = (data) => {
     setSavedData(data);
     try { localStorage.setItem(LS_KEY, JSON.stringify({ form, data })); } catch (e) {}
   };
-
   const handleBlocked = () => {
     setSavedBlocked(true);
     try { localStorage.setItem(LS_KEY, JSON.stringify({ form, blocked: true })); } catch (e) {}
@@ -102,7 +117,7 @@ export function LeadMagnet({ wrapped = true } = {}) {
       <div className="cap-pop" style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 22, padding: 48, boxShadow: "0 1px 2px rgba(15,23,42,.04), 0 30px 60px -30px rgba(15,23,42,.2)", display: "flex", justifyContent: "center" }}><span className="cap-spin" /></div>
     </div>
   ) : stage === "form" ? (
-    <MultiStepForm form={form} setForm={setForm} onSubmit={submit} />
+    <MultiStepForm form={form} setForm={setForm} onReveal={reveal} onBlocked={block} />
   ) : (
     <div style={{ maxWidth: 820, margin: "0 auto" }}>
       <div style={{ textAlign: "center", marginBottom: 32 }}>
@@ -124,10 +139,54 @@ export function LeadMagnet({ wrapped = true } = {}) {
 }
 
 // =================== MULTISTEP FORM ===================
-function MultiStepForm({ form, setForm, onSubmit }) {
+function MultiStepForm({ form, setForm, onReveal, onBlocked }) {
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+
+  // Preview del análisis: se genera en segundo plano al llegar al paso 3 (datos de contacto)
+  // y se muestra BORROSO detrás de la puerta. Al entregar los datos se desbloquea sin regenerar.
+  const [previewData, setPreviewData] = useState(null);
+  const [previewErr, setPreviewErr] = useState(false); // falla del preview en segundo plano (silenciosa)
+  const [submitErr, setSubmitErr] = useState(false); // falla al entregar datos (visible)
+  const [analyzing, setAnalyzing] = useState(false);
+  const previewSigRef = useRef("");
+  const previewPromiseRef = useRef(null);
+
+  const runPreview = () => {
+    const sig = `${form.producto}|||${form.problema}|||${form.link}`;
+    if (sig === previewSigRef.current && (previewData || analyzing)) return; // mismos inputs
+    previewSigRef.current = sig;
+    setPreviewData(null);
+    setPreviewErr(false);
+    setAnalyzing(true);
+    const p = (async () => {
+      try {
+        const res = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ producto: form.producto, problema: form.problema, link: form.link, preview: true }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || json.error || json.blocked) throw new Error(json.error || "preview");
+        setPreviewData(json);
+        return json;
+      } catch (e) {
+        setPreviewErr(true);
+        return null;
+      } finally {
+        setAnalyzing(false);
+      }
+    })();
+    previewPromiseRef.current = p;
+    return p;
+  };
+
+  // Dispara el preview al entrar al paso 3 (la guardia de firma evita regenerar si no cambió).
+  useEffect(() => {
+    if (step === 3) runPreview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
 
   const set = (k) => (e) => {
     setForm((d) => ({ ...d, [k]: e.target.value }));
@@ -169,10 +228,48 @@ function MultiStepForm({ form, setForm, onSubmit }) {
     setStep(target);
   };
   const back = () => setStep((s) => Math.max(1, s - 1));
-  const submit = () => {
+
+  // Entrega de datos → desbloqueo. Si el preview ya está (o termina), solo registramos el
+  // lead + revisamos el candado (claim) y revelamos ESE análisis (no se regenera).
+  // Si por algo no hubo preview, caemos al flujo completo de generación.
+  const submit = async () => {
     if (!validate(3)) return;
     setSubmitting(true);
-    onSubmit();
+    setSubmitErr(false);
+    try {
+      // Espera el preview en vuelo si el usuario fue más rápido que la generación.
+      let data = previewData;
+      if (!data) data = await (previewPromiseRef.current || Promise.resolve(null)).catch(() => null);
+
+      if (data) {
+        let blocked = false;
+        try {
+          const res = await fetch("/api/analyze", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...form, claim: true }),
+          });
+          const json = await res.json().catch(() => ({}));
+          blocked = !!json.blocked;
+        } catch (e) { /* fail-open: si el registro/candado falla, entregamos igual */ }
+        if (blocked) return onBlocked();
+        return onReveal(data);
+      }
+
+      // Fallback: sin preview disponible → generación completa normal (registra + candado + genera).
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (json.blocked) return onBlocked();
+      if (!res.ok || json.error) throw new Error(json.error || "bad");
+      return onReveal(json);
+    } catch (e) {
+      setSubmitErr(true);
+      setSubmitting(false);
+    }
   };
 
   const pct = Math.round(((step - 1) / 3) * 100) + 8;
@@ -256,34 +353,68 @@ function MultiStepForm({ form, setForm, onSubmit }) {
               </StepShell>
             )}
             {step === 3 && (
-              <StepShell eyebrow="Paso 3" title="Antes de finalizar" subtitle="¿A quién le mandamos los ángulos de venta?">
-                <div className="cf-grid2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
-                  <Field label="Nombre" required error={errors.nombre}>
-                    <input className={`cf-input ${errors.nombre ? "err" : ""}`} placeholder="Tu nombre" value={form.nombre} onChange={set("nombre")} />
-                  </Field>
-                  <Field label="Empresa">
-                    <input className="cf-input" placeholder="Nombre de tu empresa" value={form.empresa} onChange={set("empresa")} />
-                  </Field>
-                  <Field label="Correo" required error={errors.correo}>
-                    <input className={`cf-input ${errors.correo ? "err" : ""}`} placeholder="tucorreo@empresa.com" type="email" value={form.correo} onChange={set("correo")} />
-                  </Field>
-                  <Field label="Teléfono">
-                    <input className="cf-input" placeholder="+52 ..." value={form.telefono} onChange={set("telefono")} />
-                  </Field>
+              <div className="cf-fade" style={{ position: "relative", margin: "-8px -8px 0", minHeight: 500 }}>
+                {/* Fondo: el análisis ya trabajado, BORROSO (o un esqueleto mientras se genera). */}
+                <div aria-hidden="true" style={{ position: "absolute", inset: 0, overflow: "hidden", borderRadius: 18, maxHeight: 640 }}>
+                  <div style={{ filter: "blur(7px)", opacity: 0.6, pointerEvents: "none", userSelect: "none", transform: "scale(1.03)" }}>
+                    {previewData ? (
+                      <ResultBody data={previewData} form={form} goCheckout={() => {}} checkoutLoading={false} />
+                    ) : (
+                      <ResultSkeleton />
+                    )}
+                  </div>
+                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(248,250,252,.55) 0%, rgba(248,250,252,.82) 55%, rgba(248,250,252,.96) 100%)" }} />
                 </div>
-              </StepShell>
+
+                {/* Frente: la puerta de contacto que desbloquea el análisis. */}
+                <div style={{ position: "relative", display: "grid", placeItems: "center", padding: "24px 4px 8px" }}>
+                  <div className="cap-pop" style={{ width: "100%", maxWidth: 430, background: "#fff", border: `1px solid ${C.border}`, borderRadius: 18, boxShadow: "0 30px 70px -28px rgba(15,23,42,.45), 0 2px 8px rgba(15,23,42,.05)", padding: "26px 24px 24px" }}>
+                    <div style={{ textAlign: "center", marginBottom: 18 }}>
+                      <div style={{ width: 46, height: 46, margin: "0 auto 10px", borderRadius: 14, display: "grid", placeItems: "center", background: "linear-gradient(135deg, #F1EEFF, #E7F0FF)", border: "1px solid #E5DEFF" }}>
+                        <span style={{ fontSize: 22 }}>🔓</span>
+                      </div>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: C.violet, textTransform: "uppercase", letterSpacing: ".08em" }}>Último paso</span>
+                      <h1 className="cap-display" style={{ fontSize: 22, fontWeight: 700, margin: "6px 0 6px", color: C.ink, letterSpacing: "-0.01em" }}>Tu análisis ya está listo</h1>
+                      <p style={{ margin: 0, fontSize: 13.5, color: C.slate, lineHeight: 1.5 }}>
+                        {analyzing && !previewData
+                          ? "Aria lo está terminando mientras llenas tus datos…"
+                          : "Déjanos tus datos y lo desbloqueamos al instante."}
+                      </p>
+                    </div>
+
+                    <div className="cf-grid2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                      <Field label="Nombre" required error={errors.nombre}>
+                        <input className={`cf-input ${errors.nombre ? "err" : ""}`} placeholder="Tu nombre" value={form.nombre} onChange={set("nombre")} />
+                      </Field>
+                      <Field label="Empresa">
+                        <input className="cf-input" placeholder="Tu empresa" value={form.empresa} onChange={set("empresa")} />
+                      </Field>
+                      <Field label="Correo" required error={errors.correo}>
+                        <input className={`cf-input ${errors.correo ? "err" : ""}`} placeholder="tucorreo@empresa.com" type="email" value={form.correo} onChange={set("correo")} />
+                      </Field>
+                      <Field label="Teléfono">
+                        <input className="cf-input" placeholder="+52 ..." value={form.telefono} onChange={set("telefono")} />
+                      </Field>
+                    </div>
+
+                    <button className="cf-btn cf-btn--primary" onClick={submit} disabled={submitting} style={{ width: "100%", marginTop: 18, justifyContent: "center" }}>
+                      {submitting ? (<><Loader2 size={16} className="cf-spin" /> Desbloqueando…</>) : (<>Ver mi análisis <Sparkles size={16} /></>)}
+                    </button>
+                    {submitErr && (
+                      <p style={{ margin: "10px 0 0", fontSize: 12.5, color: "#E11D48", textAlign: "center" }}>Hubo un problema. Toca de nuevo para reintentar.</p>
+                    )}
+                    <p style={{ margin: "12px 0 0", fontSize: 11.5, color: C.slate, textAlign: "center", lineHeight: 1.5 }}>🔒 Sin spam. Te enviamos el análisis y nada más.</p>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 
-          <div style={{ marginTop: 28, display: "flex", justifyContent: "flex-end" }}>
-            {step < 3 ? (
+          {step < 3 && (
+            <div style={{ marginTop: 28, display: "flex", justifyContent: "flex-end" }}>
               <button className="cf-btn cf-btn--primary" onClick={next}>Continuar <ArrowRight size={16} /></button>
-            ) : (
-              <button className="cf-btn cf-btn--primary" onClick={submit} disabled={submitting}>
-                {submitting ? (<><Loader2 size={16} className="cf-spin" /> Generando…</>) : (<>Generar mis ángulos <Sparkles size={16} /></>)}
-              </button>
-            )}
-          </div>
+            </div>
+          )}
         </main>
       </div>
     </div>
@@ -386,78 +517,113 @@ function ResultCard({ form, initialData, initialBlocked, onComplete, onBlocked }
           <button className="cap-btn cap-btn-primary" onClick={goCheckout} disabled={checkoutLoading} style={{ padding: "14px 34px", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${C.violet}, ${C.blue})`, color: "#fff", fontWeight: 700, fontSize: 15, cursor: checkoutLoading ? "wait" : "pointer", fontFamily: "inherit", opacity: checkoutLoading ? 0.7 : 1 }}>{checkoutLoading ? "Redirigiendo…" : "Conseguir la campaña — $27 USD →"}</button>
         </div>
       )}
-      {data && (
-        <div className="cap-stagger">
-          <div>
-            <SectionTitle n="01" t="Tu cliente ideal" />
-            <div style={tableWrap}><table style={tableStyle}><tbody>
-              {[["Perfil", data.persona.nombre], ["Edad", data.persona.edad], ["Rol / decisión", data.persona.rol], ["Dolor principal", data.persona.dolor], ["Lo que desea", data.persona.deseo], ["Objeción clave", data.persona.objecion], ["Dónde alcanzarlo", data.persona.donde]].map(([k, v], i) => (
-                <tr key={i} className="cap-row" style={{ borderTop: i ? `1px solid ${C.borderSoft}` : "none" }}><td style={{ ...tdc, color: C.slate, width: 150, fontWeight: 500 }}>{k}</td><td style={{ ...tdc, color: C.ink }}>{v}</td></tr>
-              ))}
-            </tbody></table></div>
-          </div>
-          <div>
-            <SectionTitle n="02" t="Tus ángulos de venta" />
-            <div className="cap-angulos-table" style={tableWrap}><table style={{ ...tableStyle, minWidth: 460 }}>
-              <thead><tr><th style={thc}>Ángulo</th><th style={thc}>Temp.</th><th style={thc}>Dolor</th><th style={thc}>Hooks (0-3s)</th></tr></thead>
-              <tbody>{data.angulos.map((a, i) => (
-                <tr key={i} className="cap-row" style={{ borderTop: `1px solid ${C.borderSoft}` }}>
-                  <td style={{ ...tdc, verticalAlign: "top" }}><b style={{ color: C.navy }}>{a.nombre}</b><div style={{ color: C.slate, fontSize: 11, marginTop: 3 }}>{a.conciencia}</div></td>
-                  <td style={{ ...tdc, verticalAlign: "top" }}><Temp t={a.temperatura} /></td>
-                  <td style={{ ...tdc, verticalAlign: "top", color: C.slate }}>{a.dolor}</td>
-                  <td style={{ ...tdc, verticalAlign: "top", color: C.ink }}>{a.hooks.map((h, j) => (<div key={j} style={{ marginBottom: 6, paddingLeft: 14, position: "relative" }}><span style={{ position: "absolute", left: 0, color: C.violet }}>›</span>{h}</div>))}</td>
-                </tr>
-              ))}</tbody>
-            </table></div>
-            <div className="cap-angulos-cards" style={{ gap: 12 }}>
-              {data.angulos.map((a, i) => (
-                <div key={i} style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 16 }}>
-                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
-                    <div>
-                      <b style={{ color: C.navy, fontSize: 14.5 }}>{a.nombre}</b>
-                      <div style={{ color: C.slate, fontSize: 11, marginTop: 3 }}>{a.conciencia}</div>
-                    </div>
-                    <Temp t={a.temperatura} />
-                  </div>
-                  <div style={{ marginTop: 12 }}>
-                    <div style={{ fontSize: 10.5, color: C.slate, textTransform: "uppercase", letterSpacing: .5, fontWeight: 600, marginBottom: 4 }}>Dolor que ataca</div>
-                    <div style={{ fontSize: 13.5, color: C.slate, lineHeight: 1.5 }}>{a.dolor}</div>
-                  </div>
-                  <div style={{ marginTop: 12 }}>
-                    <div style={{ fontSize: 10.5, color: C.slate, textTransform: "uppercase", letterSpacing: .5, fontWeight: 600, marginBottom: 4 }}>Hooks (0-3s)</div>
-                    {a.hooks.map((h, j) => (
-                      <div key={j} style={{ marginBottom: 5, paddingLeft: 14, position: "relative", fontSize: 13.5, color: C.ink, lineHeight: 1.5 }}>
-                        <span style={{ position: "absolute", left: 0, color: C.violet }}>›</span>{h}
-                      </div>
-                    ))}
-                  </div>
+      {data && <ResultBody data={data} form={form} goCheckout={goCheckout} checkoutLoading={checkoutLoading} />}
+    </div>
+  );
+}
+
+// Cuerpo del análisis (persona + ángulos + anuncios + CTA). Se reutiliza tal cual como
+// fondo BORROSO en la puerta de contacto del paso 3.
+function ResultBody({ data, form, goCheckout, checkoutLoading }) {
+  return (
+    <div className="cap-stagger">
+      <div>
+        <SectionTitle n="01" t="Tu cliente ideal" />
+        <div style={tableWrap}><table style={tableStyle}><tbody>
+          {[["Perfil", data.persona.nombre], ["Edad", data.persona.edad], ["Rol / decisión", data.persona.rol], ["Dolor principal", data.persona.dolor], ["Lo que desea", data.persona.deseo], ["Objeción clave", data.persona.objecion], ["Dónde alcanzarlo", data.persona.donde]].map(([k, v], i) => (
+            <tr key={i} className="cap-row" style={{ borderTop: i ? `1px solid ${C.borderSoft}` : "none" }}><td style={{ ...tdc, color: C.slate, width: 150, fontWeight: 500 }}>{k}</td><td style={{ ...tdc, color: C.ink }}>{v}</td></tr>
+          ))}
+        </tbody></table></div>
+      </div>
+      <div>
+        <SectionTitle n="02" t="Tus ángulos de venta" />
+        <div className="cap-angulos-table" style={tableWrap}><table style={{ ...tableStyle, minWidth: 460 }}>
+          <thead><tr><th style={thc}>Ángulo</th><th style={thc}>Temp.</th><th style={thc}>Dolor</th><th style={thc}>Hooks (0-3s)</th></tr></thead>
+          <tbody>{data.angulos.map((a, i) => (
+            <tr key={i} className="cap-row" style={{ borderTop: `1px solid ${C.borderSoft}` }}>
+              <td style={{ ...tdc, verticalAlign: "top" }}><b style={{ color: C.navy }}>{a.nombre}</b><div style={{ color: C.slate, fontSize: 11, marginTop: 3 }}>{a.conciencia}</div></td>
+              <td style={{ ...tdc, verticalAlign: "top" }}><Temp t={a.temperatura} /></td>
+              <td style={{ ...tdc, verticalAlign: "top", color: C.slate }}>{a.dolor}</td>
+              <td style={{ ...tdc, verticalAlign: "top", color: C.ink }}>{a.hooks.map((h, j) => (<div key={j} style={{ marginBottom: 6, paddingLeft: 14, position: "relative" }}><span style={{ position: "absolute", left: 0, color: C.violet }}>›</span>{h}</div>))}</td>
+            </tr>
+          ))}</tbody>
+        </table></div>
+        <div className="cap-angulos-cards" style={{ gap: 12 }}>
+          {data.angulos.map((a, i) => (
+            <div key={i} style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 16 }}>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                <div>
+                  <b style={{ color: C.navy, fontSize: 14.5 }}>{a.nombre}</b>
+                  <div style={{ color: C.slate, fontSize: 11, marginTop: 3 }}>{a.conciencia}</div>
                 </div>
-              ))}
+                <Temp t={a.temperatura} />
+              </div>
+              <div style={{ marginTop: 12 }}>
+                <div style={{ fontSize: 10.5, color: C.slate, textTransform: "uppercase", letterSpacing: .5, fontWeight: 600, marginBottom: 4 }}>Dolor que ataca</div>
+                <div style={{ fontSize: 13.5, color: C.slate, lineHeight: 1.5 }}>{a.dolor}</div>
+              </div>
+              <div style={{ marginTop: 12 }}>
+                <div style={{ fontSize: 10.5, color: C.slate, textTransform: "uppercase", letterSpacing: .5, fontWeight: 600, marginBottom: 4 }}>Hooks (0-3s)</div>
+                {a.hooks.map((h, j) => (
+                  <div key={j} style={{ marginBottom: 5, paddingLeft: 14, position: "relative", fontSize: 13.5, color: C.ink, lineHeight: 1.5 }}>
+                    <span style={{ position: "absolute", left: 0, color: C.violet }}>›</span>{h}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div>
+        <SectionTitle n="03" t="2 anuncios de muestra" />
+        <div style={{ display: "grid", gap: 16 }}>{(data.anuncios || []).map((ad, i) => (
+          <div key={i} className="cap-adcard" style={{ border: `1px solid ${C.border}`, borderRadius: 16, overflow: "hidden" }}>
+            <div style={{ padding: "11px 16px", background: C.surfaceAlt, borderBottom: `1px solid ${C.borderSoft}`, display: "flex", justifyContent: "space-between" }}><span style={{ fontSize: 12, color: C.slate, fontWeight: 500 }}>Anuncio {i + 1}</span><span style={{ fontSize: 11, color: C.violet, fontWeight: 600 }}>Ángulo: {ad.angulo}</span></div>
+            <div style={{ padding: 18, display: "grid", gap: 14 }}>
+              <AdField label="Título"><div className="cap-display" style={{ fontWeight: 600, fontSize: 16, color: C.navy }}>{ad.titulo}</div></AdField>
+              <AdField label="Copy"><div style={{ fontSize: 13.5, lineHeight: 1.6, whiteSpace: "pre-wrap", color: "#334155" }}>{ad.copy_out}</div></AdField>
+              <AdField label="Prompt del estático" copy={ad.prompt}><div style={{ fontSize: 12.5, lineHeight: 1.55, color: "#475569", whiteSpace: "pre-wrap", fontFamily: "ui-monospace, 'SF Mono', monospace", background: C.surfaceAlt, border: `1px solid ${C.borderSoft}`, borderRadius: 10, padding: "11px 13px" }}>{ad.prompt}</div></AdField>
             </div>
           </div>
-          <div>
-            <SectionTitle n="03" t="2 anuncios de muestra" />
-            <div style={{ display: "grid", gap: 16 }}>{(data.anuncios || []).map((ad, i) => (
-              <div key={i} className="cap-adcard" style={{ border: `1px solid ${C.border}`, borderRadius: 16, overflow: "hidden" }}>
-                <div style={{ padding: "11px 16px", background: C.surfaceAlt, borderBottom: `1px solid ${C.borderSoft}`, display: "flex", justifyContent: "space-between" }}><span style={{ fontSize: 12, color: C.slate, fontWeight: 500 }}>Anuncio {i + 1}</span><span style={{ fontSize: 11, color: C.violet, fontWeight: 600 }}>Ángulo: {ad.angulo}</span></div>
-                <div style={{ padding: 18, display: "grid", gap: 14 }}>
-                  <AdField label="Título"><div className="cap-display" style={{ fontWeight: 600, fontSize: 16, color: C.navy }}>{ad.titulo}</div></AdField>
-                  <AdField label="Copy"><div style={{ fontSize: 13.5, lineHeight: 1.6, whiteSpace: "pre-wrap", color: "#334155" }}>{ad.copy_out}</div></AdField>
-                  <AdField label="Prompt del estático" copy={ad.prompt}><div style={{ fontSize: 12.5, lineHeight: 1.55, color: "#475569", whiteSpace: "pre-wrap", fontFamily: "ui-monospace, 'SF Mono', monospace", background: C.surfaceAlt, border: `1px solid ${C.borderSoft}`, borderRadius: 10, padding: "11px 13px" }}>{ad.prompt}</div></AdField>
-                </div>
-              </div>
-            ))}</div>
+        ))}</div>
+      </div>
+      <div style={{ marginTop: 16, padding: 28, borderRadius: 18, background: `linear-gradient(135deg, ${C.violet}, ${C.blue})`, textAlign: "center", color: "#fff" }}>
+        <h3 className="cap-display" style={{ fontSize: 21, fontWeight: 700, margin: "0 0 10px", lineHeight: 1.25 }}>¿Quieres la Campaña completa lista para lanzar?</h3>
+        <p style={{ fontSize: 14, margin: "0 0 18px", lineHeight: 1.6, color: "rgba(255,255,255,.9)", maxWidth: 520, marginInline: "auto" }}>
+          Recibe un set de <b>6-10 ads por temperatura</b>, prompts + <b>anuncios en imagen</b>, <b>scripts para videos</b> y un <b>plan de testing</b>. Adquiérela por <b>$27 USD</b> y lanza tu campaña exitosa hoy.
+        </p>
+        <button className="cap-btn" onClick={goCheckout} disabled={checkoutLoading} style={{ padding: "14px 34px", borderRadius: 12, border: "none", background: "#fff", color: C.violet, fontWeight: 700, fontSize: 15, cursor: checkoutLoading ? "wait" : "pointer", fontFamily: "inherit", opacity: checkoutLoading ? 0.7 : 1 }}>{checkoutLoading ? "Redirigiendo…" : "Conseguir la campaña — $27 USD →"}</button>
+        <p style={{ fontSize: 11.5, margin: "12px 0 0", color: "rgba(255,255,255,.7)" }}>Pago seguro con Stripe · en tu moneda local</p>
+      </div>
+    </div>
+  );
+}
+
+// Esqueleto del resultado: se muestra (borroso) detrás de la puerta mientras Aria genera.
+function ResultSkeleton() {
+  const bar = (w, h = 12) => <div style={{ height: h, width: w, borderRadius: 6, background: "#E8EDF3" }} />;
+  return (
+    <div style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 22, padding: 32 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 18, alignItems: "center" }}>
+        <span style={{ width: 22, height: 22, borderRadius: 6, background: `linear-gradient(135deg, ${C.violet}, ${C.blue})` }} />
+        {bar(230)}
+      </div>
+      {bar(150, 14)}
+      <div style={{ border: `1px solid ${C.border}`, borderRadius: 16, overflow: "hidden", marginTop: 12 }}>
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} style={{ display: "grid", gridTemplateColumns: "150px 1fr", gap: 16, padding: "13px 15px", borderTop: i ? `1px solid ${C.borderSoft}` : "none" }}>
+            {bar("70%")}{bar("85%")}
           </div>
-          <div style={{ marginTop: 16, padding: 28, borderRadius: 18, background: `linear-gradient(135deg, ${C.violet}, ${C.blue})`, textAlign: "center", color: "#fff" }}>
-            <h3 className="cap-display" style={{ fontSize: 21, fontWeight: 700, margin: "0 0 10px", lineHeight: 1.25 }}>¿Quieres la Campaña completa lista para lanzar?</h3>
-            <p style={{ fontSize: 14, margin: "0 0 18px", lineHeight: 1.6, color: "rgba(255,255,255,.9)", maxWidth: 520, marginInline: "auto" }}>
-              Recibe un set de <b>6-10 ads por temperatura</b>, prompts + <b>anuncios en imagen</b>, <b>scripts para videos</b> y un <b>plan de testing</b>. Adquiérela por <b>$27 USD</b> y lanza tu campaña exitosa hoy.
-            </p>
-            <button className="cap-btn" onClick={goCheckout} disabled={checkoutLoading} style={{ padding: "14px 34px", borderRadius: 12, border: "none", background: "#fff", color: C.violet, fontWeight: 700, fontSize: 15, cursor: checkoutLoading ? "wait" : "pointer", fontFamily: "inherit", opacity: checkoutLoading ? 0.7 : 1 }}>{checkoutLoading ? "Redirigiendo…" : "Conseguir la campaña — $27 USD →"}</button>
-            <p style={{ fontSize: 11.5, margin: "12px 0 0", color: "rgba(255,255,255,.7)" }}>Pago seguro con Stripe · en tu moneda local</p>
+        ))}
+      </div>
+      <div style={{ marginTop: 24 }}>{bar(180, 14)}</div>
+      <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 16, display: "grid", gap: 10 }}>
+            {bar("45%")}{bar("90%")}{bar("78%")}
           </div>
-        </div>
-      )}
+        ))}
+      </div>
     </div>
   );
 }

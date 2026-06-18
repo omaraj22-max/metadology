@@ -303,23 +303,46 @@ export async function POST(req) {
     );
   }
 
+  // MODO CLAIM: el análisis ya se generó en modo preview (resultado borroso tras la puerta
+  // de contacto). Aquí el usuario ENTREGA sus datos: solo registramos el lead y revisamos el
+  // candado por correo, SIN volver a generar. Es la "entrega de datos" que desbloquea.
+  if (form.claim) {
+    if (!form.test && (await emailAlreadyUsed(correo))) {
+      return Response.json({ blocked: true });
+    }
+    await recordLead({
+      nombre: form.nombre,
+      correo,
+      telefono: form.telefono,
+      empresa: form.empresa,
+      producto,
+      link: form.link,
+      problema,
+    });
+    return Response.json({ ok: true });
+  }
+
   // CANDADO SERVER-SIDE: si este correo ya usó su análisis gratis, bloquear.
+  // En PREVIEW aún no hay correo (el usuario no ha llegado a los datos), así que no aplica.
   // form.test (solo /landing-3 en modo prueba) salta el candado para poder probar repetido.
-  if (!form.test && (await emailAlreadyUsed(correo))) {
+  if (!form.preview && !form.test && (await emailAlreadyUsed(correo))) {
     return Response.json({ blocked: true });
   }
 
   // Capturamos el lead en PARALELO con la generación (no antes), para no sumar su latencia
-  // al presupuesto de tiempo. Si falta la key o Claude falla, el contacto igual queda guardado.
-  const leadPromise = recordLead({
-    nombre: form.nombre,
-    correo: form.correo,
-    telefono: form.telefono,
-    empresa: form.empresa,
-    producto: form.producto,
-    link: form.link,
-    problema: form.problema,
-  });
+  // al presupuesto de tiempo. En PREVIEW no registramos: todavía no hay datos de contacto
+  // (eso ocurre luego en el modo claim).
+  const leadPromise = form.preview
+    ? Promise.resolve()
+    : recordLead({
+        nombre: form.nombre,
+        correo: form.correo,
+        telefono: form.telefono,
+        empresa: form.empresa,
+        producto: form.producto,
+        link: form.link,
+        problema: form.problema,
+      });
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
