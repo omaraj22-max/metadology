@@ -74,6 +74,31 @@ export default function Gracias() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage]);
 
+  // Descarga una imagen individual (fuerza descarga vía blob; si falla CORS, abre en pestaña).
+  const downloadImage = async (url, name) => {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("fetch");
+      const blob = await res.blob();
+      const u = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = u; a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(u);
+    } catch (e) {
+      window.open(url, "_blank");
+    }
+  };
+
+  const downloadAllImages = async () => {
+    const list = [];
+    (campaign.creativos || []).forEach((cr) => {
+      if (cr.imagen) list.push([cr.imagen, `${cr.id || "ad"}.jpg`]);
+      (cr.carrusel || []).forEach((cs, k) => { if (cs.imagen) list.push([cs.imagen, `${cr.id || "ad"}-slide-${cs.n || k + 1}.jpg`]); });
+    });
+    for (const [u, n] of list) { await downloadImage(u, n); await new Promise((r) => setTimeout(r, 400)); }
+  };
+
   const download = async () => {
     if (!campaign) return;
     setDownloading(true);
@@ -96,6 +121,16 @@ export default function Gracias() {
       setDownloading(false);
     }
   };
+
+  // Progreso de imágenes: el PPTX se habilita solo cuando TODAS están listas.
+  let imagesTotal = 0, imagesDone = 0;
+  if (campaign) {
+    (campaign.creativos || []).forEach((cr) => {
+      if (cr.prompt) { imagesTotal++; if (cr.imagen) imagesDone++; }
+      (cr.carrusel || []).forEach((cs) => { if (cs.prompt) { imagesTotal++; if (cs.imagen) imagesDone++; } });
+    });
+  }
+  const allImagesReady = imagesTotal === 0 || imagesDone >= imagesTotal;
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, fontFamily: "'Inter', system-ui, sans-serif", color: C.ink, padding: "40px 20px" }}>
@@ -127,9 +162,17 @@ export default function Gracias() {
             <div style={{ background: `linear-gradient(135deg, ${C.violet}, ${C.blue})`, borderRadius: 20, padding: 32, color: "#fff", marginBottom: 22, textAlign: "center" }}>
               <h1 style={{ fontSize: 24, fontWeight: 700, margin: "0 0 8px" }}>Tu campaña completa está lista 🚀</h1>
               <p style={{ fontSize: 14, color: "rgba(255,255,255,.9)", margin: "0 0 20px", lineHeight: 1.6 }}>{campaign.titulo}</p>
-              <button onClick={download} disabled={downloading} style={{ padding: "14px 30px", borderRadius: 12, border: "none", background: "#fff", color: C.violet, fontWeight: 700, fontSize: 15, cursor: downloading ? "wait" : "pointer", opacity: downloading ? 0.7 : 1 }}>
-                {downloading ? "Generando…" : "⬇ Descargar presentación (.pptx)"}
-              </button>
+              <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+                <button onClick={download} disabled={downloading || !allImagesReady} style={{ padding: "14px 28px", borderRadius: 12, border: "none", background: "#fff", color: C.violet, fontWeight: 700, fontSize: 15, cursor: downloading || !allImagesReady ? "not-allowed" : "pointer", opacity: downloading || !allImagesReady ? 0.6 : 1 }}>
+                  {downloading ? "Generando…" : !allImagesReady ? `Generando imágenes (${imagesDone}/${imagesTotal})…` : "⬇ Descargar presentación (.pptx)"}
+                </button>
+                {allImagesReady && imagesTotal > 0 && (
+                  <button onClick={downloadAllImages} style={{ padding: "14px 22px", borderRadius: 12, border: "1.5px solid rgba(255,255,255,.5)", background: "transparent", color: "#fff", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
+                    ⬇ Descargar todas las imágenes
+                  </button>
+                )}
+              </div>
+              {!allImagesReady && <p style={{ fontSize: 11.5, color: "rgba(255,255,255,.75)", margin: "12px 0 0" }}>Las imágenes se están generando (1-2 min). El botón se habilita al terminar.</p>}
             </div>
 
             <div style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 18, padding: 28 }}>
@@ -144,8 +187,11 @@ export default function Gracias() {
                     {cr.prompt && !isCarrusel ? (
                       <div style={{ width: 130, flexShrink: 0 }}>
                         {cr.imagen ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={cr.imagen} alt="" style={{ width: 130, height: 130, objectFit: "cover", borderRadius: 8, border: `1px solid ${C.border}`, display: "block" }} />
+                          <>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={cr.imagen} alt="" style={{ width: 130, height: 130, objectFit: "cover", borderRadius: 8, border: `1px solid ${C.border}`, display: "block" }} />
+                            <button onClick={() => downloadImage(cr.imagen, `${cr.id || "ad"}.jpg`)} style={{ marginTop: 6, width: 130, fontSize: 11, color: C.violet, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 7, padding: "4px 0", cursor: "pointer", fontWeight: 600 }}>⬇ Descargar</button>
+                          </>
                         ) : (
                           <div style={{ width: 130, height: 130, borderRadius: 8, border: `1px solid ${C.border}`, background: C.surfaceAlt, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8 }}>
                             <div style={{ width: 22, height: 22, border: `2.5px solid ${C.border}`, borderTopColor: C.violet, borderRadius: "50%", animation: "sp 0.8s linear infinite" }} />
@@ -168,8 +214,11 @@ export default function Gracias() {
                         {cr.carrusel.map((cs, k) => (
                           <div key={k} style={{ width: 96, flexShrink: 0 }}>
                             {cs.imagen ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={cs.imagen} alt="" style={{ width: 96, height: 96, objectFit: "cover", borderRadius: 6, border: `1px solid ${C.border}`, display: "block" }} />
+                              <>
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={cs.imagen} alt="" style={{ width: 96, height: 96, objectFit: "cover", borderRadius: 6, border: `1px solid ${C.border}`, display: "block" }} />
+                                <button onClick={() => downloadImage(cs.imagen, `${cr.id || "ad"}-slide-${cs.n || k + 1}.jpg`)} style={{ marginTop: 4, width: 96, fontSize: 10, color: C.violet, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, padding: "3px 0", cursor: "pointer", fontWeight: 600 }}>⬇</button>
+                              </>
                             ) : (
                               <div style={{ width: 96, height: 96, borderRadius: 6, border: `1px solid ${C.border}`, background: C.surfaceAlt, display: "flex", alignItems: "center", justifyContent: "center" }}>
                                 <div style={{ width: 18, height: 18, border: `2.5px solid ${C.border}`, borderTopColor: C.violet, borderRadius: "50%", animation: "sp 0.8s linear infinite" }} />
