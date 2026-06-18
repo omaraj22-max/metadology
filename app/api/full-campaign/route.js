@@ -5,7 +5,7 @@ export const maxDuration = 300;
 
 const STRIPE_KEY = process.env.STRIPE_SECRET_KEY || "";
 
-// Recupera la sesión de Stripe: ¿pagada? + la metadata (datos del producto).
+// Recupera la sesión de Stripe: ¿pagada? + metadata (datos del producto) + monto/moneda.
 async function getSession(sessionId) {
   if (!STRIPE_KEY || !sessionId) return { paid: false, metadata: null };
   try {
@@ -15,7 +15,10 @@ async function getSession(sessionId) {
     if (!res.ok) return { paid: false, metadata: null };
     const s = await res.json();
     const paid = s && (s.payment_status === "paid" || s.status === "complete");
-    return { paid: !!paid, metadata: s?.metadata || null };
+    // amount_total viene en la subunidad (centavos). Nuestras monedas son de 2 decimales.
+    const value = typeof s?.amount_total === "number" ? s.amount_total / 100 : null;
+    const currency = s?.currency ? String(s.currency).toUpperCase() : null;
+    return { paid: !!paid, metadata: s?.metadata || null, value, currency };
   } catch (e) {
     return { paid: false, metadata: null };
   }
@@ -141,14 +144,17 @@ export async function POST(req) {
   try { body = await req.json(); } catch {}
   const { sessionId, form } = body || {};
 
-  const { paid, metadata } = await getSession(sessionId);
+  const { paid, metadata, value, currency } = await getSession(sessionId);
   if (!paid) {
     return Response.json({ error: "Pago no verificado." }, { status: 402 });
   }
+  // Datos de la compra para reportar el evento Purchase a Meta. eventID = sessionId (dedup).
+  // Se devuelve en TODAS las respuestas pagadas (aunque la generación falle): el pago ya ocurrió.
+  const order = { value, currency, id: sessionId };
   // El producto viene de la metadata de Stripe (autoritativo, cross-device); fallback al body.
   const f = (metadata && metadata.producto) ? metadata : (form || {});
   if (!f.producto || !f.problema) {
-    return Response.json({ error: "Faltan datos del producto para generar la campaña." }, { status: 400 });
+    return Response.json({ error: "Faltan datos del producto para generar la campaña.", order }, { status: 400 });
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -181,11 +187,12 @@ export async function POST(req) {
           error: truncated
             ? "La campaña salió muy larga y se cortó. Pulsa Reintentar."
             : "La IA no devolvió JSON válido. Pulsa Reintentar.",
+          order,
         }, { status: 502 });
       }
     }
-    return Response.json({ campaign });
+    return Response.json({ campaign, order });
   } catch (e) {
-    return Response.json({ error: e?.message || "Error generando la campaña." }, { status: 502 });
+    return Response.json({ error: e?.message || "Error generando la campaña.", order }, { status: 502 });
   }
 }

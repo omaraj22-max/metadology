@@ -8,6 +8,32 @@ const C = {
 };
 const PENDING_KEY = "caperif_pending_v1";
 
+// Reporta la compra a Meta (Pixel) una sola vez por sesión. Aunque el usuario recargue
+// /gracias, el candado en localStorage evita doble conteo. eventID = sessionId permite
+// además deduplicar si en el futuro se envía también por Conversions API (server-side).
+function reportPurchase(order, sessionId) {
+  if (!sessionId) return;
+  const key = "caperif_purchase_" + sessionId;
+  try { if (localStorage.getItem(key)) return; } catch (e) {}
+  const value = typeof order?.value === "number" ? order.value : undefined;
+  const currency = order?.currency || "USD";
+  try {
+    if (typeof window !== "undefined") {
+      if (typeof window.fbq === "function") {
+        window.fbq(
+          "track",
+          "Purchase",
+          { value, currency, content_name: "Campaña completa Caperifai", content_type: "product" },
+          { eventID: sessionId }
+        );
+      }
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({ event: "purchase", value, currency, transaction_id: sessionId });
+    }
+  } catch (e) {}
+  try { localStorage.setItem(key, "1"); } catch (e) {}
+}
+
 export default function Gracias() {
   const [stage, setStage] = useState("loading"); // loading | ready | error
   const [err, setErr] = useState("");
@@ -30,6 +56,9 @@ export default function Gracias() {
         body: JSON.stringify({ sessionId, form }),
       });
       const json = await res.json().catch(() => ({}));
+      // El pago ya está verificado en el servidor (viene 'order'): reporta la compra a Meta
+      // UNA sola vez por sesión, incluso si la generación falla. eventID = sessionId (dedup).
+      if (json.order) reportPurchase(json.order, sessionId);
       if (!res.ok || json.error) throw new Error(json.error || `Error ${res.status}`);
       setCampaign(json.campaign);
       setStage("ready");
