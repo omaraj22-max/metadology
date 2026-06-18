@@ -81,6 +81,52 @@ RESPONDE ÚNICAMENTE JSON VÁLIDO (sin markdown, sin backticks, sin texto extra)
 REGLAS: 10 creativos exactos. En estáticos llena "prompt" y deja "script"/"carrusel" vacíos. En UGC (video) llena "script" (4 tomas aprox) y deja "prompt"/"carrusel" vacíos — los UGC NO llevan imagen generada, solo el script. En carrusel llena "carrusel" (4-5 slides, cada una con su "prompt" de imagen) y deja "prompt"/"script" vacíos. 4-6 pasos de lanzamiento. 3 vías de escala. Todo accionable y específico a este negocio.`;
 }
 
+// Intenta parsear JSON posiblemente truncado: recorre los caracteres, cierra la
+// cadena abierta si la hubo, y balancea las llaves/corchetes pendientes. Si aun así
+// no parsea, va recortando el último elemento incompleto hasta lograrlo o rendirse.
+function tryRepairJson(s) {
+  if (!s) return null;
+  let str = String(s).trim();
+  // Quita basura final tras el último } o ] de cierre razonable
+  const lastBrace = Math.max(str.lastIndexOf("}"), str.lastIndexOf("]"));
+  const balanced = closeOpenStructures(str);
+  for (const cand of [str, balanced, closeOpenStructures(str.slice(0, lastBrace + 1))]) {
+    if (!cand) continue;
+    try { return JSON.parse(cand); } catch {}
+  }
+  // Último intento: recorta progresivamente desde el final y rebalancea.
+  let cut = str;
+  for (let i = 0; i < 200 && cut.length > 50; i++) {
+    cut = cut.slice(0, cut.lastIndexOf(",") >= 0 ? cut.lastIndexOf(",") : cut.length - 1);
+    try { return JSON.parse(closeOpenStructures(cut)); } catch {}
+  }
+  return null;
+}
+
+function closeOpenStructures(s) {
+  if (!s) return null;
+  const stack = [];
+  let inStr = false, esc = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (c === "\\") esc = true;
+      else if (c === '"') inStr = false;
+      continue;
+    }
+    if (c === '"') inStr = true;
+    else if (c === "{" || c === "[") stack.push(c);
+    else if (c === "}" || c === "]") stack.pop();
+  }
+  let out = s;
+  if (inStr) out += '"';
+  // Quita una posible coma colgante antes de cerrar
+  out = out.replace(/,\s*$/, "");
+  for (let i = stack.length - 1; i >= 0; i--) out += stack[i] === "{" ? "}" : "]";
+  return out;
+}
+
 export async function POST(req) {
   let body = {};
   try { body = await req.json(); } catch {}
@@ -106,7 +152,7 @@ export async function POST(req) {
   try {
     const msg = await client.messages.create({
       model,
-      max_tokens: 8000,
+      max_tokens: 16000, // campaña completa (10 creativos + scripts + carruseles) — evita truncado
       system: buildSystem(f),
       messages: [{ role: "user", content: "Genera la campaña completa en el JSON especificado." }],
     });
@@ -117,7 +163,17 @@ export async function POST(req) {
     try {
       campaign = JSON.parse(a >= 0 && b > a ? text.slice(a, b + 1) : text);
     } catch {
-      return Response.json({ error: "La IA no devolvió JSON válido. Recarga e intenta de nuevo." }, { status: 502 });
+      // Respaldo: si vino truncado (corte por tokens) intentamos reparar el JSON
+      // cerrando comillas/llaves/corchetes abiertos para rescatar lo generado.
+      campaign = tryRepairJson(a >= 0 ? text.slice(a) : text);
+      if (!campaign) {
+        const truncated = msg.stop_reason === "max_tokens";
+        return Response.json({
+          error: truncated
+            ? "La campaña salió muy larga y se cortó. Pulsa Reintentar."
+            : "La IA no devolvió JSON válido. Pulsa Reintentar.",
+        }, { status: 502 });
+      }
     }
     return Response.json({ campaign });
   } catch (e) {

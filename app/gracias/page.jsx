@@ -14,30 +14,32 @@ export default function Gracias() {
   const [campaign, setCampaign] = useState(null);
   const [downloading, setDownloading] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const sessionId = params.get("session_id");
-        let form = null;
-        try { form = JSON.parse(localStorage.getItem(PENDING_KEY) || "null"); } catch (e) {}
-        if (!sessionId) { setErr("No encontramos la sesión de pago."); setStage("error"); return; }
-        if (!form || !form.producto) { setErr("No encontramos los datos de tu producto. Vuelve a la página y genera tu análisis antes de pagar."); setStage("error"); return; }
-        const res = await fetch("/api/full-campaign", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId, form }),
-        });
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok || json.error) throw new Error(json.error || `Error ${res.status}`);
-        setCampaign(json.campaign);
-        setStage("ready");
-      } catch (e) {
-        setErr(e?.message || "No se pudo generar la campaña.");
-        setStage("error");
-      }
-    })();
-  }, []);
+  // Genera (o re-genera) la campaña. El producto se lee de la sesión de Stripe ya pagada,
+  // así que reintentar NO vuelve a cobrar.
+  const generate = async () => {
+    setStage("loading"); setErr("");
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const sessionId = params.get("session_id");
+      let form = null;
+      try { form = JSON.parse(localStorage.getItem(PENDING_KEY) || "null"); } catch (e) {}
+      if (!sessionId) { setErr("No encontramos la sesión de pago."); setStage("error"); return; }
+      const res = await fetch("/api/full-campaign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, form }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json.error) throw new Error(json.error || `Error ${res.status}`);
+      setCampaign(json.campaign);
+      setStage("ready");
+    } catch (e) {
+      setErr(e?.message || "No se pudo generar la campaña.");
+      setStage("error");
+    }
+  };
+
+  useEffect(() => { generate(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
   // Genera con fal.ai la imagen de cada estático y de cada SLIDE de carrusel (los UGC
   // solo llevan script, no imagen). En paralelo (3 a la vez) y de forma progresiva.
@@ -153,7 +155,9 @@ export default function Gracias() {
           <div style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 20, padding: 40 }}>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: C.navy, margin: "0 0 10px" }}>Tu pago se procesó ✓</h1>
             <p style={{ color: "#E11D48", fontSize: 14.5, lineHeight: 1.6, marginBottom: 16 }}>Pero no pudimos generar la campaña automáticamente.<br /><span style={{ color: C.slate, fontSize: 12.5 }}>Detalle: {err}</span></p>
-            <p style={{ color: C.slate, fontSize: 14, lineHeight: 1.6 }}>Escríbenos a <a href="mailto:hello@caperif.ai" style={{ color: C.violet, fontWeight: 600 }}>hello@caperif.ai</a> con tu correo de compra y te enviamos tu campaña a la mano.</p>
+            <p style={{ color: C.slate, fontSize: 14, lineHeight: 1.6, marginBottom: 18 }}>Tu pago ya está verificado, así que reintentar <strong>no vuelve a cobrar</strong>. Puedes generar tu campaña de nuevo aquí mismo:</p>
+            <button onClick={generate} style={{ background: `linear-gradient(135deg, ${C.violet}, ${C.blue})`, color: "#fff", border: "none", borderRadius: 12, padding: "12px 22px", fontSize: 15, fontWeight: 700, cursor: "pointer", marginBottom: 16 }}>Reintentar generación</button>
+            <p style={{ color: C.slate, fontSize: 13, lineHeight: 1.6 }}>Si sigue fallando, escríbenos a <a href="mailto:hello@caperif.ai" style={{ color: C.violet, fontWeight: 600 }}>hello@caperif.ai</a> con tu correo de compra y te enviamos tu campaña a la mano.</p>
           </div>
         )}
 
