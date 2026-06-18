@@ -5,18 +5,19 @@ export const maxDuration = 300;
 
 const STRIPE_KEY = process.env.STRIPE_SECRET_KEY || "";
 
-// Verifica que la sesión de Stripe esté pagada.
-async function sessionPaid(sessionId) {
-  if (!STRIPE_KEY || !sessionId) return false;
+// Recupera la sesión de Stripe: ¿pagada? + la metadata (datos del producto).
+async function getSession(sessionId) {
+  if (!STRIPE_KEY || !sessionId) return { paid: false, metadata: null };
   try {
     const res = await fetch(`https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}`, {
       headers: { Authorization: `Bearer ${STRIPE_KEY}` },
     });
-    if (!res.ok) return false;
+    if (!res.ok) return { paid: false, metadata: null };
     const s = await res.json();
-    return s && (s.payment_status === "paid" || s.status === "complete");
+    const paid = s && (s.payment_status === "paid" || s.status === "complete");
+    return { paid: !!paid, metadata: s?.metadata || null };
   } catch (e) {
-    return false;
+    return { paid: false, metadata: null };
   }
 }
 
@@ -68,7 +69,7 @@ RESPONDE ÚNICAMENTE JSON VÁLIDO (sin markdown, sin backticks, sin texto extra)
       "cta": "tipo de CTA (Cómo llegar / Más información / Comprar / etc.)",
       "prompt": "SOLO si es estático: prompt self-contained on-brand para el estático, sin logo ni marcas de agua, con todo el texto baked-in entre comillas",
       "script": [{ "t": "0-3s", "linea": "lo que dice", "pantalla": "texto en pantalla" }],
-      "carrusel": [{ "n": 1, "desc": "qué muestra y el texto de la slide" }]
+      "carrusel": [{ "n": 1, "desc": "qué muestra y el texto de la slide", "prompt": "prompt self-contained on-brand para la imagen de ESTA slide del carrusel, sin logo ni marcas de agua, con el texto de la slide baked-in entre comillas. Cierra con: No inventes textos extra." }]
     }
   ],
   "receta_visual": ["lineamiento visual 1", "lineamiento 2"],
@@ -77,7 +78,7 @@ RESPONDE ÚNICAMENTE JSON VÁLIDO (sin markdown, sin backticks, sin texto extra)
   "escala": [{ "titulo": "vía de escala", "detalle": "cómo" }]
 }
 
-REGLAS: 10 creativos exactos. En estáticos llena "prompt" y deja "script"/"carrusel" vacíos. En UGC llena "script" (4 tomas aprox) y deja "prompt"/"carrusel" vacíos. En carrusel llena "carrusel" (4-5 slides) y deja "prompt"/"script" vacíos. 4-6 pasos de lanzamiento. 3 vías de escala. Todo accionable y específico a este negocio.`;
+REGLAS: 10 creativos exactos. En estáticos llena "prompt" y deja "script"/"carrusel" vacíos. En UGC (video) llena "script" (4 tomas aprox) y deja "prompt"/"carrusel" vacíos — los UGC NO llevan imagen generada, solo el script. En carrusel llena "carrusel" (4-5 slides, cada una con su "prompt" de imagen) y deja "prompt"/"script" vacíos. 4-6 pasos de lanzamiento. 3 vías de escala. Todo accionable y específico a este negocio.`;
 }
 
 export async function POST(req) {
@@ -85,10 +86,12 @@ export async function POST(req) {
   try { body = await req.json(); } catch {}
   const { sessionId, form } = body || {};
 
-  if (!(await sessionPaid(sessionId))) {
+  const { paid, metadata } = await getSession(sessionId);
+  if (!paid) {
     return Response.json({ error: "Pago no verificado." }, { status: 402 });
   }
-  const f = form || {};
+  // El producto viene de la metadata de Stripe (autoritativo, cross-device); fallback al body.
+  const f = (metadata && metadata.producto) ? metadata : (form || {});
   if (!f.producto || !f.problema) {
     return Response.json({ error: "Faltan datos del producto para generar la campaña." }, { status: 400 });
   }

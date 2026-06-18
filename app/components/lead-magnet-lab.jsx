@@ -478,7 +478,7 @@ function ResultCard({ form, initialData, initialBlocked, onComplete, onBlocked, 
     // Guardamos los datos del producto para generar la campaña completa tras el pago.
     try { localStorage.setItem("caperif_pending_v1", JSON.stringify(form)); } catch (e) {}
     try {
-      const res = await fetch("/api/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: form.correo, country: form.pais }) });
+      const res = await fetch("/api/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: form.correo, country: form.pais, form }) });
       const json = await res.json().catch(() => ({}));
       if (json.url) { window.location.href = json.url; return; }
       alert(json.error || "No se pudo iniciar el pago. Intenta de nuevo.");

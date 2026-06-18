@@ -39,26 +39,37 @@ export default function Gracias() {
     })();
   }, []);
 
-  // Genera las imágenes de cada anuncio estático (las que tienen prompt) con fal.ai,
-  // en paralelo (2 a la vez) y de forma progresiva.
+  // Genera con fal.ai la imagen de cada estático y de cada SLIDE de carrusel (los UGC
+  // solo llevan script, no imagen). En paralelo (3 a la vez) y de forma progresiva.
   useEffect(() => {
     if (stage !== "ready" || !campaign) return;
     let cancelled = false;
-    const targets = (campaign.creativos || []).map((cr, i) => ({ cr, i })).filter((x) => x.cr.prompt && !x.cr.imagen);
+    const targets = [];
+    (campaign.creativos || []).forEach((cr, i) => {
+      if (cr.prompt && !cr.imagen) targets.push({ prompt: cr.prompt, i, k: -1 });
+      if (Array.isArray(cr.carrusel)) cr.carrusel.forEach((cs, k) => { if (cs.prompt && !cs.imagen) targets.push({ prompt: cs.prompt, i, k }); });
+    });
     let idx = 0;
     const worker = async () => {
       while (idx < targets.length && !cancelled) {
         const my = targets[idx++];
         try {
-          const res = await fetch("/api/generate-image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt: my.cr.prompt }) });
+          const res = await fetch("/api/generate-image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt: my.prompt }) });
           const json = await res.json().catch(() => ({}));
           if (json.url && !cancelled) {
-            setCampaign((prev) => ({ ...prev, creativos: prev.creativos.map((c, j) => (j === my.i ? { ...c, imagen: json.url } : c)) }));
+            setCampaign((prev) => ({
+              ...prev,
+              creativos: prev.creativos.map((c, j) => {
+                if (j !== my.i) return c;
+                if (my.k === -1) return { ...c, imagen: json.url };
+                return { ...c, carrusel: (c.carrusel || []).map((cs, kk) => (kk === my.k ? { ...cs, imagen: json.url } : cs)) };
+              }),
+            }));
           }
         } catch (e) {}
       }
     };
-    Promise.all([worker(), worker()]);
+    Promise.all([worker(), worker(), worker()]);
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage]);
@@ -125,9 +136,12 @@ export default function Gracias() {
               <h2 style={{ fontSize: 17, fontWeight: 700, color: C.navy, margin: "0 0 4px" }}>Vista previa: tus 10 creativos</h2>
               <p style={{ color: C.slate, fontSize: 13, margin: "0 0 18px" }}>Todo el detalle (estrategia, scripts, carruseles, plan de lanzamiento) está en la presentación descargable.</p>
               <div style={{ display: "grid", gap: 12 }}>
-                {(campaign.creativos || []).map((cr, i) => (
-                  <div key={i} style={{ border: `1px solid ${C.border}`, borderRadius: 12, padding: 14, display: "flex", gap: 14 }}>
-                    {cr.prompt ? (
+                {(campaign.creativos || []).map((cr, i) => {
+                  const isUGC = /ugc/i.test(cr.formato || "");
+                  const isCarrusel = Array.isArray(cr.carrusel) && cr.carrusel.length > 0;
+                  return (
+                  <div key={i} style={{ border: `1px solid ${C.border}`, borderRadius: 12, padding: 14, display: "flex", gap: 14, flexDirection: isCarrusel ? "column" : "row" }}>
+                    {cr.prompt && !isCarrusel ? (
                       <div style={{ width: 130, flexShrink: 0 }}>
                         {cr.imagen ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -147,9 +161,28 @@ export default function Gracias() {
                       </div>
                       {cr.hook && <div style={{ fontSize: 12.5, color: C.ink, fontStyle: "italic", marginBottom: 4 }}>“{cr.hook}”</div>}
                       {cr.copy_out && <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{cr.copy_out}</div>}
+                      {isUGC && <div style={{ fontSize: 12, color: C.violet, fontWeight: 600, marginTop: 6 }}>🎬 Video UGC · el script completo está en la presentación</div>}
                     </div>
+                    {isCarrusel && (
+                      <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingTop: 4 }}>
+                        {cr.carrusel.map((cs, k) => (
+                          <div key={k} style={{ width: 96, flexShrink: 0 }}>
+                            {cs.imagen ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={cs.imagen} alt="" style={{ width: 96, height: 96, objectFit: "cover", borderRadius: 6, border: `1px solid ${C.border}`, display: "block" }} />
+                            ) : (
+                              <div style={{ width: 96, height: 96, borderRadius: 6, border: `1px solid ${C.border}`, background: C.surfaceAlt, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                <div style={{ width: 18, height: 18, border: `2.5px solid ${C.border}`, borderTopColor: C.violet, borderRadius: "50%", animation: "sp 0.8s linear infinite" }} />
+                              </div>
+                            )}
+                            <div style={{ fontSize: 9.5, color: C.slate, textAlign: "center", marginTop: 3 }}>Slide {cs.n || k + 1}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </>

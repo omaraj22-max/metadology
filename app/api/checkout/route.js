@@ -51,6 +51,17 @@ export async function POST(req) {
   params.append("payment_method_types[]", "card");
   if (body.email && /\S+@\S+\.\S+/.test(body.email)) params.set("customer_email", body.email);
 
+  // Guardamos el producto en la metadata de la sesión → recuperable tras el pago en
+  // cualquier dispositivo (no dependemos solo de localStorage). Cada valor máx 500 chars.
+  const f = body.form || {};
+  const meta = {
+    nombre: f.nombre, correo: f.correo, telefono: f.telefono, empresa: f.empresa,
+    producto: f.producto, link: f.link, problema: f.problema, pais: f.pais,
+  };
+  Object.entries(meta).forEach(([k, v]) => {
+    if (v != null && String(v).trim()) params.set(`metadata[${k}]`, String(v).slice(0, 480));
+  });
+
   try {
     const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
       method: "POST",

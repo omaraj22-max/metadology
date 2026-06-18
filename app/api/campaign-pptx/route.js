@@ -42,9 +42,16 @@ export async function POST(req) {
   const c = body && body.campaign;
   if (!c) return Response.json({ error: "Falta 'campaign'." }, { status: 400 });
 
-  // Pre-descarga las imágenes generadas de cada creativo (en paralelo) para embeberlas.
+  // Pre-descarga las imágenes generadas (estáticos y slides de carrusel) en paralelo.
   const creativosArr = Array.isArray(c.creativos) ? c.creativos : [];
   const imgData = await Promise.all(creativosArr.map((cr) => (cr.imagen ? fetchImageData(cr.imagen) : Promise.resolve(null))));
+  const carImgData = await Promise.all(
+    creativosArr.map((cr) =>
+      Array.isArray(cr.carrusel)
+        ? Promise.all(cr.carrusel.map((cs) => (cs.imagen ? fetchImageData(cs.imagen) : Promise.resolve(null))))
+        : Promise.resolve([])
+    )
+  );
 
   try {
   const pptx = new PptxGenJS();
@@ -149,8 +156,15 @@ export async function POST(req) {
       s.addTable(rows, { x: 6.7, y: 3.15, w: 6.1, colW: [1, 3.1, 2], fontSize: 8.5, color: INK, border: { type: "solid", color: BORDER, pt: 0.5 }, valign: "top" });
     } else if (fmt.includes("carrusel") && Array.isArray(cr.carrusel) && cr.carrusel.length) {
       s.addText("CARRUSEL · SLIDES", { x: 6.7, y: 2.85, w: 6, h: 0.3, fontSize: 9, bold: true, color: SLATE });
-      const items = cr.carrusel.slice(0, 6).map((cs) => `${cs.n || ""}. ${cs.desc || ""}`).join("\n");
-      s.addText(items, { x: 6.7, y: 3.15, w: 6.1, h: 3.0, fontSize: 11, color: INK, valign: "top", lineSpacingMultiple: 1.3 });
+      const slides = cr.carrusel.slice(0, 4);
+      const imgs = carImgData[ci] || [];
+      slides.forEach((cs, k) => {
+        const ix = 6.7 + k * 1.52;
+        if (imgs[k]) {
+          try { s.addImage({ data: imgs[k], x: ix, y: 3.2, w: 1.42, h: 1.42 }); } catch (e) {}
+        }
+        s.addText(`${cs.n || k + 1}. ${String(cs.desc || "").slice(0, 90)}`, { x: ix, y: 4.7, w: 1.48, h: 1.5, fontSize: 7.5, color: SLATE, valign: "top", lineSpacingMultiple: 1.1 });
+      });
     } else if (cr.prompt) {
       s.addText("PROMPT DEL ESTÁTICO", { x: 6.7, y: 2.85, w: 6, h: 0.3, fontSize: 9, bold: true, color: SLATE });
       s.addText(String(cr.prompt), { x: 6.7, y: 3.15, w: 6.1, h: 3.0, fontSize: 9.5, color: SLATE, valign: "top", fill: { color: "F8FAFC" }, lineSpacingMultiple: 1.15 });
