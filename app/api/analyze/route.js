@@ -127,6 +127,49 @@ TAREA: Devuelve ÚNICAMENTE JSON válido (sin markdown, sin backticks):
 Sé concreto y accionable. Español LATAM cercano. 3-4 ítems máximo por lista.`;
 }
 
+// Descarga una imagen y la devuelve como bloque base64 para Claude (visión). Falla suave.
+async function toImageBlock(url) {
+  if (!url || !/^https?:\/\//i.test(url)) return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 6000);
+  try {
+    const res = await fetch(url, { signal: controller.signal, headers: { "User-Agent": "Mozilla/5.0" } });
+    if (!res.ok) return null;
+    const ct = (res.headers.get("content-type") || "").split(";")[0].trim();
+    if (!ct.startsWith("image/")) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (!buf.length || buf.length > 4_500_000) return null; // límite ~5MB de Anthropic
+    return { type: "image", source: { type: "base64", media_type: ct, data: buf.toString("base64") } };
+  } catch (e) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Saca el look & feel del sitio del usuario: la og:image (o twitter:image) de su link.
+async function fetchSiteImage(link) {
+  if (!link || !/^https?:\/\//i.test(link)) return "";
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 6000);
+  try {
+    const res = await fetch(link, { signal: controller.signal, headers: { "User-Agent": "Mozilla/5.0" } });
+    if (!res.ok) return "";
+    const html = (await res.text()).slice(0, 200000);
+    const m =
+      html.match(/<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)["'][^>]+content=["']([^"']+)["']/i) ||
+      html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image|twitter:image)["']/i);
+    let url = m ? m[1] : "";
+    if (url.startsWith("//")) url = "https:" + url;
+    else if (url.startsWith("/")) { try { url = new URL(url, link).href; } catch (e) {} }
+    return url;
+  } catch (e) {
+    return "";
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function adsReference(selectedAds) {
   if (!selectedAds || !selectedAds.length) return "";
   const list = selectedAds
@@ -139,12 +182,19 @@ function adsReference(selectedAds) {
     .join("\n");
   return `
 
-REFERENCIA VISUAL DE LA COMPETENCIA: el usuario seleccionó estos anuncios de su competencia que le gustaron. En el campo "prompt" de cada anuncio, INSPÍRATE en su estilo visual / formato / composición para que el resultado se sienta del mismo nivel, PERO con el mensaje y el ángulo diferenciados del cliente (no copies su copy). Supéralos.
-ANUNCIOS DE REFERENCIA:
+REFERENCIA DE LA COMPETENCIA: el usuario seleccionó estos anuncios de su competencia que le gustaron (su copy abajo). La DIRECCIÓN VISUAL de los prompts la tomas de las IMÁGENES de referencia adjuntas; aquí enfócate en DIFERENCIAR el mensaje y el ángulo del cliente (no copies su copy). Supéralos.
+ANUNCIOS DE REFERENCIA (copy):
 ${list}`;
 }
 
-function buildSystem({ producto, empresa, problema, link }, selectedAds) {
+function promptFieldInstruction(visualRefs) {
+  if (visualRefs) {
+    return `prompt self-contained para generar el estático. La DIRECCIÓN VISUAL debe basarse en las IMÁGENES DE REFERENCIA adjuntas: (a) los anuncios que el cliente eligió de su competencia y (b) el look & feel del sitio web del cliente. Replica el tipo de composición, la paleta de colores, el estilo (fotográfico/gráfico/ilustrado), la tipografía y el tono de esas referencias, adaptado a la marca y el mensaje del cliente (no copies sus textos). Describe la escena/composición, la paleta, la tipografía y el titular, e incluye TODO el texto que va baked-in entre comillas tal cual. Cierra con: No inventes textos extra.`;
+  }
+  return `prompt self-contained para generar el estático: escena fotográfica premium (NO vector plano, NO fondo oscuro salvo marca), luminoso y aireado; describe la composición, la palabra-fantasma gigante ghosted de fondo si aplica, el titular limpio con keyword en color de acento, y TODO el texto que va baked-in entre comillas tal cual. Cierra con: No inventes textos extra.`;
+}
+
+function buildSystem({ producto, empresa, problema, link }, selectedAds, visualRefs) {
   return `Eres Aria, el copiloto de IA de Caperifai, operando con la metodología METADOLOGY ADS para campañas de Meta.
 
 PREMISA CENTRAL: Meta premia darle a la IA muchos ángulos GENUINAMENTE distintos para emparejar cada mensaje con el usuario correcto. Un concepto realmente distinto = 1 Entity ID = 1 boleto a la subasta. Todo empieza en el mensaje.
@@ -192,7 +242,7 @@ RESPONDE ÚNICAMENTE CON JSON VÁLIDO, sin markdown, sin backticks, sin texto an
       "angulo": "nombre del ángulo del que sale este anuncio (debe ser uno de los de arriba)",
       "copy_out": "copy del anuncio siguiendo Hook→Valor→Oferta: arranca con el hook que filtra, agita el dolor, mata una objeción con autoridad/bandera, cierra con urgencia + CTA. 3-5 líneas, español LATAM, listo para pegar en Meta.",
       "titulo": "titular corto del anuncio (headline del placement, máx ~40 caracteres)",
-      "prompt": "prompt self-contained para generar el estático: escena fotográfica premium (NO vector plano, NO fondo oscuro salvo marca), luminoso y aireado; describe la composición, la palabra-fantasma gigante ghosted de fondo si aplica, el titular limpio con keyword en color de acento, y TODO el texto que va baked-in entre comillas tal cual. Cierra con: No inventes textos extra."
+      "prompt": "${promptFieldInstruction(visualRefs)}"
     }
   ]
 }
@@ -262,16 +312,35 @@ export async function POST(req) {
   const textOf = (msg) =>
     msg.content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
 
+  // Imágenes de referencia (solo /landing-3): anuncios elegidos + look&feel del sitio del cliente.
+  // Se le pasan a Claude (visión) para que base la dirección visual de los prompts en ese estilo.
+  let imageBlocks = [];
+  if (selectedAds.length) {
+    const adUrls = selectedAds.map((a) => a.imagen).filter((u) => u && /^https?:/i.test(u)).slice(0, 4);
+    const siteImg = await fetchSiteImage(form.link);
+    const refUrls = siteImg ? [...adUrls, siteImg] : adUrls;
+    imageBlocks = (await Promise.all(refUrls.map(toImageBlock))).filter(Boolean);
+  }
+  const visualRefs = imageBlocks.length > 0;
+  const mainUserContent = visualRefs
+    ? [
+        {
+          type: "text",
+          text:
+            "Genera el buyer persona y los ángulos en el JSON especificado. Te adjunto imágenes de referencia: anuncios de la competencia que le gustaron al cliente y el look & feel de su sitio. Basa la dirección visual de los prompts de imagen en ESE estilo.",
+        },
+        ...imageBlocks,
+      ]
+    : "Genera el buyer persona y los ángulos en el JSON especificado.";
+
   try {
     // El análisis principal y el competitivo corren EN PARALELO. El competitivo nunca
     // tumba al principal: si falla, su promesa resuelve a null.
     const mainPromise = client.messages.create({
       model,
       max_tokens: 3000,
-      system: buildSystem(form, selectedAds),
-      messages: [
-        { role: "user", content: "Genera el buyer persona y los ángulos en el JSON especificado." },
-      ],
+      system: buildSystem(form, selectedAds, visualRefs),
+      messages: [{ role: "user", content: mainUserContent }],
     });
     const compPromise = selectedAds.length
       ? client.messages
