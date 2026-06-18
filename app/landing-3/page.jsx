@@ -68,7 +68,7 @@ export default function Landing3Page() {
         <div className="wrap hero-grid">
           <div className="hero-copy">
             <span className="tag"><span className="dot"></span>Para pymes que corren Meta Ads y no ven el retorno</span>
-            <h1>Tus anuncios no fallan por el algoritmo. Fallan porque no le hablan <em className="grad-text">a nadie</em>.</h1>
+            <h1>Tus anuncios no fallan por el algoritmo. <span className="grad-text">Fallan porque no le hablan a nadie.</span></h1>
             <p className="sub">Dile a Aria qué vendes y en 2 minutos te regresa tu buyer persona real, los ángulos que mueven a tu cliente y 2 anuncios completos listos para lanzar. Gratis, sin tarjeta. Tuyo aunque nunca vuelvas.</p>
             <div className="hero-cta">
               <a href="#cta" className="btn btn-primary btn-lg">Quiero mi diagnóstico gratis</a>
@@ -386,7 +386,7 @@ export default function Landing3Page() {
       {/* FINAL CTA + FORM */}
       <section className="final reveal" id="cta">
         <div className="wrap inner">
-          <h2>Deja de adivinar. Empieza a saber.</h2>
+          <h2>Deja de adivinar. Empieza a vender.</h2>
           <p>Cada semana que corres campañas sin el ángulo correcto pagas el costo de no saber. Y ese costo, en publicidad, nunca para.</p>
           <p>Caperifai no es para quien busca que alguien más le resuelva la vida. Es para quien quiere entender su negocio y moverlo con criterio.</p>
         </div>
