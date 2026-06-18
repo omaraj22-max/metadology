@@ -432,7 +432,7 @@ function ResultCard({ form, initialData, initialBlocked, onComplete, onBlocked, 
   const [data, setData] = useState(initialData || null);
   const [blocked, setBlocked] = useState(!!initialBlocked);
   const [loading, setLoading] = useState(!initialData && !initialBlocked);
-  const [err, setErr] = useState(false);
+  const [err, setErr] = useState("");
   useEffect(() => {
     if (initialData || initialBlocked) return;
     (async () => {
@@ -442,13 +442,13 @@ function ResultCard({ form, initialData, initialBlocked, onComplete, onBlocked, 
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...form, selectedAds: selectedAds || [], test: true }),
         });
-        if (!res.ok) throw new Error("bad status");
-        const json = await res.json();
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json.error || `Error ${res.status}`);
         if (json.blocked) { setBlocked(true); if (onBlocked) onBlocked(); return; }
         if (json.error) throw new Error(json.error);
         setData(json);
         if (onComplete) onComplete(json);
-      } catch (e) { setErr(true); } finally { setLoading(false); }
+      } catch (e) { setErr(e?.message || "Error generando el análisis."); } finally { setLoading(false); }
     })();
   }, []);
   const goDemo = () => { if (DEMO_URL) window.open(DEMO_URL, "_blank"); else alert("Configura NEXT_PUBLIC_DEMO_URL con tu link de agenda."); };
@@ -460,7 +460,7 @@ function ResultCard({ form, initialData, initialBlocked, onComplete, onBlocked, 
         <span style={{ fontWeight: 600, fontSize: 14, color: C.navy }}>Aria · tu análisis para {form.empresa || "tu negocio"}</span>
       </div>
       {loading && <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "48px 0", gap: 16 }}><span className="cap-spin" /><span style={{ color: C.slate, fontSize: 13.5 }}>Analizando tu producto y construyendo ángulos…</span></div>}
-      {err && <p style={{ color: "#E11D48", fontSize: 14, padding: "20px 0" }}>Hubo un error generando el análisis. Recarga e intenta de nuevo.</p>}
+      {err && <p style={{ color: "#E11D48", fontSize: 14, padding: "20px 0", lineHeight: 1.5 }}>Hubo un error generando el análisis. Recarga e intenta de nuevo.<br /><span style={{ fontSize: 11.5, color: C.slate }}>Detalle: {err}</span></p>}
       {blocked && (
         <div style={{ textAlign: "center", padding: "20px 8px 4px" }}>
           <div style={{ fontSize: 38, marginBottom: 10 }}>🔒</div>

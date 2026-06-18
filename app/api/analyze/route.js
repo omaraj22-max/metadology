@@ -222,7 +222,15 @@ export async function POST(req) {
 
   // Capturamos el lead LO ANTES POSIBLE: antes incluso del gate de la API key.
   // Si falta la key o Claude falla, el contacto igual queda guardado en el Sheet.
-  await recordLead(form);
+  await recordLead({
+    nombre: form.nombre,
+    correo: form.correo,
+    telefono: form.telefono,
+    empresa: form.empresa,
+    producto: form.producto,
+    link: form.link,
+    problema: form.problema,
+  });
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -240,30 +248,45 @@ export async function POST(req) {
     ? form.selectedAds.slice(0, 12)
     : [];
 
+  // Extrae el primer objeto JSON del texto (tolerante a texto extra alrededor).
+  const parseJson = (s) => {
+    const t = String(s || "").replace(/```json|```/g, "").trim();
+    const a = t.indexOf("{");
+    const b = t.lastIndexOf("}");
+    return JSON.parse(a >= 0 && b > a ? t.slice(a, b + 1) : t);
+  };
+  const textOf = (msg) =>
+    msg.content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
+
   try {
-    const msg = await client.messages.create({
+    // El análisis principal y el competitivo corren EN PARALELO. El competitivo nunca
+    // tumba al principal: si falla, su promesa resuelve a null.
+    const mainPromise = client.messages.create({
       model,
       max_tokens: 3000,
       system: buildSystem(form, selectedAds),
       messages: [
-        {
-          role: "user",
-          content:
-            "Genera el buyer persona y los ángulos en el JSON especificado.",
-        },
+        { role: "user", content: "Genera el buyer persona y los ángulos en el JSON especificado." },
       ],
     });
+    const compPromise = selectedAds.length
+      ? client.messages
+          .create({
+            model: process.env.ANTHROPIC_COMPETITIVE_MODEL || "claude-haiku-4-5-20251001",
+            max_tokens: 1200,
+            system: competitiveSystem(selectedAds, form),
+            messages: [
+              { role: "user", content: "Genera el análisis competitivo en el JSON especificado." },
+            ],
+          })
+          .catch(() => null)
+      : Promise.resolve(null);
 
-    const text = msg.content
-      .filter((b) => b.type === "text")
-      .map((b) => b.text)
-      .join("\n");
-
-    const clean = text.replace(/```json|```/g, "").trim();
+    const [msg, compMsg] = await Promise.all([mainPromise, compPromise]);
 
     let data;
     try {
-      data = JSON.parse(clean);
+      data = parseJson(textOf(msg));
     } catch {
       return Response.json(
         { error: "La IA no devolvió JSON válido. Intenta de nuevo." },
@@ -271,31 +294,12 @@ export async function POST(req) {
       );
     }
 
-    // Análisis competitivo sobre los anuncios que el usuario seleccionó (solo /landing-3).
-    if (selectedAds.length) {
+    if (compMsg) {
       try {
-        const compMsg = await client.messages.create({
-          // Haiku: más rápido/barato; suficiente para resumir anuncios. Mantiene el total bajo 60s.
-          model: process.env.ANTHROPIC_COMPETITIVE_MODEL || "claude-haiku-4-5-20251001",
-          max_tokens: 1200,
-          system: competitiveSystem(selectedAds, form),
-          messages: [
-            {
-              role: "user",
-              content: "Genera el análisis competitivo en el JSON especificado.",
-            },
-          ],
-        });
-        const compText = compMsg.content
-          .filter((b) => b.type === "text")
-          .map((b) => b.text)
-          .join("\n")
-          .replace(/```json|```/g, "")
-          .trim();
-        const comp = JSON.parse(compText);
+        const comp = parseJson(textOf(compMsg));
         data.competitivo = { ...comp, anuncios: selectedAds };
       } catch (e) {
-        // si falla, devolvemos el análisis normal sin la sección competitiva
+        // sin sección competitiva, pero el análisis principal va igual
       }
     }
 
