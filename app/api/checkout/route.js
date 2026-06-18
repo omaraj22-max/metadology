@@ -46,7 +46,7 @@ export async function POST(req) {
     "line_items[0][price_data][product_data][description]",
     "Set de 6-10 ads por temperatura, prompts + anuncios en imagen, scripts para videos y plan de testing."
   );
-  params.set("success_url", `${origin}/?compra=ok`);
+  params.set("success_url", `${origin}/gracias?session_id={CHECKOUT_SESSION_ID}`);
   params.set("cancel_url", `${origin}/?compra=cancelada`);
   params.append("payment_method_types[]", "card");
   if (body.email && /\S+@\S+\.\S+/.test(body.email)) params.set("customer_email", body.email);

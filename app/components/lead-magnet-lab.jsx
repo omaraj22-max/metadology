@@ -475,6 +475,8 @@ function ResultCard({ form, initialData, initialBlocked, onComplete, onBlocked, 
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const goCheckout = async () => {
     setCheckoutLoading(true);
+    // Guardamos los datos del producto para generar la campaña completa tras el pago.
+    try { localStorage.setItem("caperif_pending_v1", JSON.stringify(form)); } catch (e) {}
     try {
       const res = await fetch("/api/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: form.correo, country: form.pais }) });
       const json = await res.json().catch(() => ({}));
