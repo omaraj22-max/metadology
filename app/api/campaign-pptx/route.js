@@ -13,12 +13,40 @@ const BORDER = "E2E8F0";
 const W = 13.333;
 const H = 7.5;
 
+// Descarga una imagen y la devuelve como data URI base64 para embeberla en el PPTX.
+async function fetchImageData(url) {
+  if (!url || !/^https?:\/\//i.test(url)) return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 12000);
+  try {
+    const res = await fetch(url, { signal: controller.signal, headers: { "User-Agent": "Mozilla/5.0" } });
+    if (!res.ok) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (!buf.length || buf.length > 5_000_000) return null;
+    const b = buf;
+    let mt = "image/jpeg";
+    if (b[0] === 0x89 && b[1] === 0x50) mt = "image/png";
+    else if (b[0] === 0x47 && b[1] === 0x49) mt = "image/gif";
+    else if (b.length >= 12 && b[8] === 0x57 && b[9] === 0x45) mt = "image/webp";
+    return `data:${mt};base64,${buf.toString("base64")}`;
+  } catch (e) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function POST(req) {
   let body = {};
   try { body = await req.json(); } catch {}
   const c = body && body.campaign;
   if (!c) return Response.json({ error: "Falta 'campaign'." }, { status: 400 });
 
+  // Pre-descarga las imágenes generadas de cada creativo (en paralelo) para embeberlas.
+  const creativosArr = Array.isArray(c.creativos) ? c.creativos : [];
+  const imgData = await Promise.all(creativosArr.map((cr) => (cr.imagen ? fetchImageData(cr.imagen) : Promise.resolve(null))));
+
+  try {
   const pptx = new PptxGenJS();
   pptx.defineLayout({ name: "WIDE", width: W, height: H });
   pptx.layout = "WIDE";
@@ -93,8 +121,8 @@ export async function POST(req) {
   }
 
   // ---- Creativos ----
-  const creativos = Array.isArray(c.creativos) ? c.creativos : [];
-  creativos.forEach((cr) => {
+  const creativos = creativosArr;
+  creativos.forEach((cr, ci) => {
     s = pptx.addSlide(); s.background = { color: "FFFFFF" };
     eyebrow(s, `${cr.id || ""} · ${cr.formato || ""} · ${cr.temperatura || ""}`);
     title(s, cr.titulo || cr.angulo || "");
@@ -102,9 +130,19 @@ export async function POST(req) {
     s.addText([{ text: "HOOK 0-3s\n", options: { bold: true, color: SLATE, fontSize: 9 } }, { text: cr.hook || "", options: { color: INK, italic: true } }], { x: 0.5, y: 2.05, w: 12.3, h: 0.7, fontSize: 12, valign: "top" });
     s.addText([{ text: "COPY\n", options: { bold: true, color: SLATE, fontSize: 9 } }, { text: cr.copy_out || "", options: { color: INK } }], { x: 0.5, y: 2.85, w: 6.0, h: 3.4, fontSize: 11.5, valign: "top", lineSpacingMultiple: 1.15 });
 
-    // Columna derecha: detalle por formato
+    // Columna derecha: imagen generada (si hay) y/o detalle por formato
     const fmt = String(cr.formato || "").toLowerCase();
-    if (fmt.includes("ugc") && Array.isArray(cr.script) && cr.script.length) {
+    let imgOk = false;
+    if (imgData[ci]) {
+      try {
+        s.addImage({ data: imgData[ci], x: 8.7, y: 2.0, w: 4.1, h: 4.1 });
+        s.addText("ANUNCIO GENERADO", { x: 8.7, y: 1.65, w: 4, h: 0.3, fontSize: 9, bold: true, color: SLATE });
+        imgOk = true;
+      } catch (e) { imgOk = false; }
+    }
+    if (imgOk) {
+      // imagen ya colocada
+    } else if (fmt.includes("ugc") && Array.isArray(cr.script) && cr.script.length) {
       s.addText("SCRIPT DE GRABACIÓN", { x: 6.7, y: 2.85, w: 6, h: 0.3, fontSize: 9, bold: true, color: SLATE });
       const rows = [[{ text: "T", options: { bold: true, fill: { color: LIGHT }, color: NAVY } }, { text: "Línea", options: { bold: true, fill: { color: LIGHT }, color: NAVY } }, { text: "En pantalla", options: { bold: true, fill: { color: LIGHT }, color: NAVY } }]];
       cr.script.slice(0, 6).forEach((r) => rows.push([{ text: String(r.t || "") }, { text: String(r.linea || "") }, { text: String(r.pantalla || "") }]));
@@ -157,4 +195,7 @@ export async function POST(req) {
       "Content-Disposition": `attachment; filename="${fname}"`,
     },
   });
+  } catch (e) {
+    return Response.json({ error: String(e?.message || e) }, { status: 500 });
+  }
 }

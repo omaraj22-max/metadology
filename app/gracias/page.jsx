@@ -39,6 +39,30 @@ export default function Gracias() {
     })();
   }, []);
 
+  // Genera las imágenes de cada anuncio estático (las que tienen prompt) con fal.ai,
+  // en paralelo (2 a la vez) y de forma progresiva.
+  useEffect(() => {
+    if (stage !== "ready" || !campaign) return;
+    let cancelled = false;
+    const targets = (campaign.creativos || []).map((cr, i) => ({ cr, i })).filter((x) => x.cr.prompt && !x.cr.imagen);
+    let idx = 0;
+    const worker = async () => {
+      while (idx < targets.length && !cancelled) {
+        const my = targets[idx++];
+        try {
+          const res = await fetch("/api/generate-image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt: my.cr.prompt }) });
+          const json = await res.json().catch(() => ({}));
+          if (json.url && !cancelled) {
+            setCampaign((prev) => ({ ...prev, creativos: prev.creativos.map((c, j) => (j === my.i ? { ...c, imagen: json.url } : c)) }));
+          }
+        } catch (e) {}
+      }
+    };
+    Promise.all([worker(), worker()]);
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage]);
+
   const download = async () => {
     if (!campaign) return;
     setDownloading(true);
@@ -102,13 +126,28 @@ export default function Gracias() {
               <p style={{ color: C.slate, fontSize: 13, margin: "0 0 18px" }}>Todo el detalle (estrategia, scripts, carruseles, plan de lanzamiento) está en la presentación descargable.</p>
               <div style={{ display: "grid", gap: 12 }}>
                 {(campaign.creativos || []).map((cr, i) => (
-                  <div key={i} style={{ border: `1px solid ${C.border}`, borderRadius: 12, padding: 14 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
-                      <b style={{ color: C.navy, fontSize: 14 }}>{cr.id} · {cr.titulo || cr.angulo}</b>
-                      <span style={{ fontSize: 11, color: C.violet, fontWeight: 600 }}>{cr.formato} · {cr.temperatura}</span>
+                  <div key={i} style={{ border: `1px solid ${C.border}`, borderRadius: 12, padding: 14, display: "flex", gap: 14 }}>
+                    {cr.prompt ? (
+                      <div style={{ width: 130, flexShrink: 0 }}>
+                        {cr.imagen ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={cr.imagen} alt="" style={{ width: 130, height: 130, objectFit: "cover", borderRadius: 8, border: `1px solid ${C.border}`, display: "block" }} />
+                        ) : (
+                          <div style={{ width: 130, height: 130, borderRadius: 8, border: `1px solid ${C.border}`, background: C.surfaceAlt, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                            <div style={{ width: 22, height: 22, border: `2.5px solid ${C.border}`, borderTopColor: C.violet, borderRadius: "50%", animation: "sp 0.8s linear infinite" }} />
+                            <span style={{ fontSize: 10, color: C.slate, textAlign: "center" }}>Generando…</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : null}
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
+                        <b style={{ color: C.navy, fontSize: 14 }}>{cr.id} · {cr.titulo || cr.angulo}</b>
+                        <span style={{ fontSize: 11, color: C.violet, fontWeight: 600 }}>{cr.formato} · {cr.temperatura}</span>
+                      </div>
+                      {cr.hook && <div style={{ fontSize: 12.5, color: C.ink, fontStyle: "italic", marginBottom: 4 }}>“{cr.hook}”</div>}
+                      {cr.copy_out && <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{cr.copy_out}</div>}
                     </div>
-                    {cr.hook && <div style={{ fontSize: 12.5, color: C.ink, fontStyle: "italic", marginBottom: 4 }}>“{cr.hook}”</div>}
-                    {cr.copy_out && <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{cr.copy_out}</div>}
                   </div>
                 ))}
               </div>
