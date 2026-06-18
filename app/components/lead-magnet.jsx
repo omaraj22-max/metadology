@@ -354,7 +354,16 @@ function ResultCard({ form, initialData, initialBlocked, onComplete, onBlocked }
       } catch (e) { setErr(true); } finally { setLoading(false); }
     })();
   }, []);
-  const goDemo = () => { if (DEMO_URL) window.open(DEMO_URL, "_blank"); else alert("Configura NEXT_PUBLIC_DEMO_URL con tu link de agenda."); };
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const goCheckout = async () => {
+    setCheckoutLoading(true);
+    try {
+      const res = await fetch("/api/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: form.correo, country: form.pais }) });
+      const json = await res.json().catch(() => ({}));
+      if (json.url) { window.location.href = json.url; return; }
+      alert(json.error || "No se pudo iniciar el pago. Intenta de nuevo.");
+    } catch (e) { alert("No se pudo iniciar el pago. Intenta de nuevo."); } finally { setCheckoutLoading(false); }
+  };
 
   return (
     <div className="cap-pop" style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 22, padding: 32, boxShadow: "0 1px 2px rgba(15,23,42,.04), 0 30px 60px -30px rgba(15,23,42,.2)" }}>
@@ -369,10 +378,10 @@ function ResultCard({ form, initialData, initialBlocked, onComplete, onBlocked }
           <div style={{ fontSize: 38, marginBottom: 10 }}>🔒</div>
           <h3 className="cap-display" style={{ fontSize: 20, fontWeight: 700, color: C.navy, margin: "0 0 8px" }}>Ya usaste tu análisis gratis</h3>
           <p style={{ fontSize: 14.5, color: C.slate, lineHeight: 1.6, maxWidth: 460, margin: "0 auto 22px" }}>
-            El análisis gratuito es uno por persona. Para llevar tus ángulos a una campaña completa
-            —creativos por ángulo, Entity IDs y lanzamiento en Meta— agenda una demo con Aria.
+            El análisis gratuito es uno por persona. ¿Quieres la <b>campaña completa lista para lanzar</b>?
+            Set de 6-10 ads por temperatura, prompts + anuncios en imagen, scripts para videos y plan de testing, por $27 USD.
           </p>
-          <button className="cap-btn cap-btn-primary" onClick={goDemo} style={{ padding: "14px 34px", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${C.violet}, ${C.blue})`, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit" }}>Solicita tu demo →</button>
+          <button className="cap-btn cap-btn-primary" onClick={goCheckout} disabled={checkoutLoading} style={{ padding: "14px 34px", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${C.violet}, ${C.blue})`, color: "#fff", fontWeight: 700, fontSize: 15, cursor: checkoutLoading ? "wait" : "pointer", fontFamily: "inherit", opacity: checkoutLoading ? 0.7 : 1 }}>{checkoutLoading ? "Redirigiendo…" : "Conseguir la campaña — $27 USD →"}</button>
         </div>
       )}
       {data && (
@@ -438,9 +447,12 @@ function ResultCard({ form, initialData, initialBlocked, onComplete, onBlocked }
             ))}</div>
           </div>
           <div style={{ marginTop: 16, padding: 28, borderRadius: 18, background: `linear-gradient(135deg, ${C.violet}, ${C.blue})`, textAlign: "center", color: "#fff" }}>
-            <h3 className="cap-display" style={{ fontSize: 20, fontWeight: 700, margin: "0 0 8px" }}>¿Quieres la campaña completa?</h3>
-            <p style={{ fontSize: 13.5, margin: "0 0 20px", lineHeight: 1.55, color: "rgba(255,255,255,.85)" }}>Te di 2 anuncios de muestra de tus {(data.angulos || []).length} ángulos. En una demo, Aria te arma la campaña completa: creativos para cada ángulo, Entity IDs y lanzamiento en Meta.</p>
-            <button className="cap-btn" onClick={goDemo} style={{ padding: "14px 34px", borderRadius: 12, border: "none", background: "#fff", color: C.violet, fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit" }}>Solicita tu demo →</button>
+            <h3 className="cap-display" style={{ fontSize: 21, fontWeight: 700, margin: "0 0 10px", lineHeight: 1.25 }}>¿Quieres la Campaña completa lista para lanzar?</h3>
+            <p style={{ fontSize: 14, margin: "0 0 18px", lineHeight: 1.6, color: "rgba(255,255,255,.9)", maxWidth: 520, marginInline: "auto" }}>
+              Recibe un set de <b>6-10 ads por temperatura</b>, prompts + <b>anuncios en imagen</b>, <b>scripts para videos</b> y un <b>plan de testing</b>. Adquiérela por <b>$27 USD</b> y lanza tu campaña exitosa hoy.
+            </p>
+            <button className="cap-btn" onClick={goCheckout} disabled={checkoutLoading} style={{ padding: "14px 34px", borderRadius: 12, border: "none", background: "#fff", color: C.violet, fontWeight: 700, fontSize: 15, cursor: checkoutLoading ? "wait" : "pointer", fontFamily: "inherit", opacity: checkoutLoading ? 0.7 : 1 }}>{checkoutLoading ? "Redirigiendo…" : "Conseguir la campaña — $27 USD →"}</button>
+            <p style={{ fontSize: 11.5, margin: "12px 0 0", color: "rgba(255,255,255,.7)" }}>Pago seguro con Stripe · en tu moneda local</p>
           </div>
         </div>
       )}
