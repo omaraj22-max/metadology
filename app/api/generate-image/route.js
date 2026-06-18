@@ -1,8 +1,8 @@
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
-// fal.ai. Modelo configurable por env (el usuario pidió gpt-image). Default: gpt-image-1.
-const FAL_MODEL = process.env.FAL_IMAGE_MODEL || "fal-ai/gpt-image-1";
+// fal.ai. Modelo configurable por env. Default: GPT Image 2 de OpenAI en fal.
+const FAL_MODEL = process.env.FAL_IMAGE_MODEL || "openai/gpt-image-2";
 
 export async function POST(req) {
   const FAL_KEY = process.env.FAL_KEY || process.env.FAL_API_KEY || "";
