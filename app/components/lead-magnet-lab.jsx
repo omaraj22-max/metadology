@@ -84,7 +84,7 @@ export function LeadMagnetLab({ wrapped = true } = {}) {
       for (let i = 0; i < 50 && alive(); i++) {
         await sleep(3000);
         if (!alive()) return;
-        const r = await post({ runId });
+        const r = await post({ runId, producto });
         if (r && r.status === "SUCCEEDED") { if (alive()) setAds(Array.isArray(r.ads) ? r.ads : []); return; }
         if (r && ["FAILED", "ABORTED", "TIMED-OUT", "TIMED_OUT"].includes(r.status)) { if (alive()) setAds([]); return; }
       }
@@ -187,8 +187,11 @@ function AdsSelection({ ads, onConfirm }) {
               <label key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start", border: `1.5px solid ${sel[i] ? C.violet : C.border}`, background: sel[i] ? "rgba(90,58,255,.04)" : "#fff", borderRadius: 12, padding: 12, cursor: "pointer", transition: "border-color .15s, background .15s" }}>
                 <input type="checkbox" checked={!!sel[i]} onChange={() => toggle(i)} style={{ marginTop: 3, width: 16, height: 16, accentColor: C.violet, flexShrink: 0 }} />
                 {ad.imagen ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={ad.imagen} alt="" style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 8, flexShrink: 0, border: `1px solid ${C.border}` }} />
+                  <div style={{ position: "relative", flexShrink: 0 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={ad.imagen} alt="" style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 8, border: `1px solid ${C.border}` }} />
+                    {ad.esVideo && <span style={{ position: "absolute", bottom: 4, right: 4, background: "rgba(0,0,0,.6)", color: "#fff", fontSize: 9, padding: "1px 5px", borderRadius: 4 }}>▶ video</span>}
+                  </div>
                 ) : null}
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
@@ -552,14 +555,23 @@ function ResultCard({ form, initialData, initialBlocked, onComplete, onBlocked, 
               <div style={{ fontSize: 11, color: C.slate, textTransform: "uppercase", letterSpacing: .5, fontWeight: 600, margin: "4px 0 8px" }}>Anuncios reales de la competencia (los que llevan más tiempo corriendo)</div>
               <div style={{ display: "grid", gap: 10 }}>
                 {(data.competitivo.anuncios || []).map((ad, i) => (
-                  <div key={i} style={{ border: `1px solid ${C.border}`, borderRadius: 12, padding: 14 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
-                      <b style={{ color: C.navy, fontSize: 13.5 }}>{ad.pagina || "Anunciante"}</b>
-                      <span style={{ fontSize: 11, color: C.slate, whiteSpace: "nowrap" }}>desde {ad.inicio || "n/d"}</span>
+                  <div key={i} style={{ border: `1px solid ${C.border}`, borderRadius: 12, padding: 14, display: "flex", gap: 12 }}>
+                    {ad.imagen ? (
+                      <div style={{ position: "relative", flexShrink: 0 }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={ad.imagen} alt="" style={{ width: 76, height: 76, objectFit: "cover", borderRadius: 8, border: `1px solid ${C.border}` }} />
+                        {ad.esVideo && <span style={{ position: "absolute", bottom: 4, right: 4, background: "rgba(0,0,0,.6)", color: "#fff", fontSize: 9, padding: "1px 5px", borderRadius: 4 }}>▶ video</span>}
+                      </div>
+                    ) : null}
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
+                        <b style={{ color: C.navy, fontSize: 13.5 }}>{ad.pagina || "Anunciante"}</b>
+                        <span style={{ fontSize: 11, color: C.slate, whiteSpace: "nowrap" }}>desde {ad.inicio || "n/d"}</span>
+                      </div>
+                      {ad.titulo && <div style={{ fontSize: 13, fontWeight: 600, color: C.ink, marginBottom: 3 }}>{ad.titulo}</div>}
+                      {ad.copy && <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{ad.copy}</div>}
+                      {ad.link && <a href={ad.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, color: C.violet, fontWeight: 600, display: "inline-block", marginTop: 6 }}>Ver en Ad Library →</a>}
                     </div>
-                    {ad.titulo && <div style={{ fontSize: 13, fontWeight: 600, color: C.ink, marginBottom: 3 }}>{ad.titulo}</div>}
-                    {ad.copy && <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{ad.copy}</div>}
-                    {ad.link && <a href={ad.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, color: C.violet, fontWeight: 600, display: "inline-block", marginTop: 6 }}>Ver en Ad Library →</a>}
                   </div>
                 ))}
               </div>

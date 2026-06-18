@@ -18,7 +18,7 @@ async function deriveKeyword(producto) {
       model: process.env.ANTHROPIC_COMPETITIVE_MODEL || "claude-haiku-4-5-20251001",
       max_tokens: 24,
       system:
-        "Del texto que escribe un negocio sobre lo que vende, devuelve ÚNICAMENTE una búsqueda corta (1-4 palabras, español) para encontrar anuncios de su COMPETENCIA en la biblioteca de anuncios de Meta. Solo el término de búsqueda: sin comillas, sin etiquetas, sin explicación. Usa el sustantivo/categoría principal del producto o servicio (no la marca propia del usuario). Si el texto es muy vago, usa lo más cercano a una categoría comercial.",
+        "Del texto que escribe un negocio sobre lo que vende, devuelve ÚNICAMENTE una búsqueda (2-4 palabras, español) para encontrar anuncios de COMPETIDORES que vendan lo MISMO en la biblioteca de anuncios de Meta. Usa el término MÁS ESPECÍFICO que identifique la categoría del producto/servicio, no uno genérico. Ejemplos: 'SaaS de cuentas por cobrar' → 'software de cobranza'; 'Boutique de productos americanos importados' → 'ropa importada americana'; 'Club de lectura El Aleph' → 'club de lectura'; 'arena para gatos' → 'arena para gatos'. Solo el término: sin comillas, sin etiquetas, sin explicación, sin la marca propia del usuario.",
       messages: [{ role: "user", content: txt.slice(0, 800) }],
     });
     const kw = msg.content
@@ -61,11 +61,17 @@ function mapAd(it) {
   const img =
     pick(it, [
       "imageUrls.0",
+      "videoPreviewUrls.0",
       "snapshot.images.0.original_image_url",
       "snapshot.images.0.resized_image_url",
-      "imageUrl",
+      "snapshot.videos.0.video_preview_image_url",
       "snapshot.cards.0.original_image_url",
-    ]) || (Array.isArray(it.imageUrls) ? it.imageUrls[0] : "") || "";
+      "imageUrl",
+    ]) ||
+    (Array.isArray(it.imageUrls) ? it.imageUrls[0] : "") ||
+    (Array.isArray(it.videoPreviewUrls) ? it.videoPreviewUrls[0] : "") ||
+    "";
+  const video = pick(it, ["videoUrls.0", "snapshot.videos.0.video_hd_url", "snapshot.videos.0.video_sd_url"]) || "";
   return {
     id: id || "",
     pagina: pick(it, ["pageName", "page_name", "snapshot.page_name", "pageInfo.name"]) || "",
@@ -78,6 +84,8 @@ function mapAd(it) {
     ).slice(0, 500),
     cta: pick(it, ["ctaText", "snapshot.cta_text", "cta_text"]) || "",
     imagen: img,
+    video,
+    esVideo: !!video,
     link,
     plataformas: pick(it, ["platforms", "publisher_platforms", "publisher_platform"]) || [],
   };
@@ -100,8 +108,35 @@ async function startRun(producto, country) {
   return { runId: json?.data?.id || null, startStatus: res.status, startRaw: json };
 }
 
-// Revisa el estado del run; si terminó, trae y mapea los anuncios.
-async function pollRun(runId, debug) {
+// Filtra los anuncios dejando solo competencia REAL del negocio del usuario.
+// La Ad Library hace match por cualquier palabra, así que llega mucho ruido; la IA lo limpia.
+async function filterRelevant(ads, producto) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey || !ads.length || !producto) return ads;
+  try {
+    const client = new Anthropic({ apiKey });
+    const listText = ads
+      .map((a, i) => `${i}: [${a.pagina || "?"}] ${a.titulo || ""} — ${String(a.copy || "").slice(0, 180)}`)
+      .join("\n");
+    const msg = await client.messages.create({
+      model: process.env.ANTHROPIC_COMPETITIVE_MODEL || "claude-haiku-4-5-20251001",
+      max_tokens: 80,
+      system: `El usuario vende: "${String(producto).slice(0, 220)}". De la lista numerada de anuncios, identifica cuáles son COMPETENCIA DIRECTA o muy relacionada (mismo tipo de producto/servicio, o que le hablan al mismo cliente sobre el mismo problema). Descarta lo que solo coincide por una palabra suelta o es de otra categoría (hojas de cálculo genéricas, apps de entretenimiento, avisos de fraude, etc.). Responde ÚNICAMENTE con un array JSON de índices, ej: [0,2,5]. Si ninguno aplica: [].`,
+      messages: [{ role: "user", content: listText }],
+    });
+    const txt = msg.content.filter((b) => b.type === "text").map((b) => b.text).join(" ");
+    const m = txt.match(/\[[\d,\s]*\]/);
+    if (!m) return ads;
+    const idx = JSON.parse(m[0]);
+    const filtered = idx.map((i) => ads[i]).filter(Boolean);
+    return filtered; // puede ser [] si no hay competencia relevante (estado vacío honesto)
+  } catch (e) {
+    return ads;
+  }
+}
+
+// Revisa el estado del run; si terminó, trae, mapea y filtra los anuncios por relevancia.
+async function pollRun(runId, debug, producto) {
   const r = await fetch(`https://api.apify.com/v2/actor-runs/${runId}?token=${APIFY_TOKEN}`);
   const j = await r.json().catch(() => null);
   const status = j?.data?.status || "UNKNOWN";
@@ -111,17 +146,20 @@ async function pollRun(runId, debug) {
   );
   const items = await di.json().catch(() => null);
   const arr = Array.isArray(items) ? items : [];
-  const ads = arr.map(mapAd).filter((a) => a.pagina || a.copy || a.titulo || a.imagen);
+  let ads = arr.map(mapAd).filter((a) => a.pagina || a.copy || a.titulo || a.imagen);
+  ads.sort((a, b) => (a.inicio || "9999").localeCompare(b.inicio || "9999"));
+  const rawMapped = ads.length;
+  ads = await filterRelevant(ads, producto);
   ads.sort((a, b) => (a.inicio || "9999").localeCompare(b.inicio || "9999"));
   const out = { ok: true, status: "SUCCEEDED", count: ads.length, ads: ads.slice(0, 12) };
-  if (debug || ads.length === 0) out.debug = { rawCount: arr.length, rawSample: arr[0] || null };
+  if (debug || ads.length === 0) out.debug = { rawCount: arr.length, mapped: rawMapped, rawSample: arr[0] || null };
   return out;
 }
 
 async function handle({ producto, runId, country, debug }) {
   if (!APIFY_TOKEN) return Response.json({ ok: false, error: "Falta APIFY_TOKEN en el servidor." });
   try {
-    if (runId) return Response.json(await pollRun(runId, debug));
+    if (runId) return Response.json(await pollRun(runId, debug, producto));
     if (!producto) return Response.json({ ok: false, error: "Falta 'producto' / 'q'." });
     const keyword = await deriveKeyword(producto);
     const { runId: id, startStatus, startRaw } = await startRun(keyword, country);
