@@ -6,6 +6,7 @@ import { Sparkles, ArrowLeft, ArrowRight, Check, Building2, Target, Send, Loader
 // Config
 const DEMO_URL = process.env.NEXT_PUBLIC_DEMO_URL || "";
 const LS_KEY = "caperif_lead_v1"; // 1 uso por navegador
+const LAB_KEY = "caperif_lab_v1"; // estado guardado de /landing-3
 
 const C = {
   violet: "#5A3AFF",
@@ -60,10 +61,40 @@ export function LeadMagnetLab({ wrapped = true } = {}) {
   const [form, setForm] = useState({ nombre: "", correo: "", telefono: "", empresa: "", producto: "", link: "", problema: "", pais: "MX" });
   const [selectedAds, setSelectedAds] = useState([]);
   const [ads, setAds] = useState(null); // null = buscando / no listo · array = resultado
+  const [savedData, setSavedData] = useState(null);
+  const [savedBlocked, setSavedBlocked] = useState(false);
+  const [ready, setReady] = useState(false); // evita flash del form mientras revisa localStorage
   const prefetchRef = useRef(false);
   const tokenRef = useRef(0);
   const cancelRef = useRef(false);
   useEffect(() => () => { cancelRef.current = true; }, []);
+
+  // Al montar: si ya generó en este navegador, restaura su resultado y bloquea el formulario.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LAB_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && (parsed.data || parsed.blocked)) {
+          setForm((f) => ({ ...f, ...(parsed.form || {}) }));
+          if (parsed.data) setSavedData(parsed.data);
+          if (parsed.blocked) setSavedBlocked(true);
+          setStage("result");
+        }
+      }
+    } catch (e) {}
+    setReady(true);
+  }, []);
+
+  // Resultado generado: lo persistimos. A partir de aquí queda bloqueado aunque refresque.
+  const handleComplete = (data) => {
+    setSavedData(data);
+    try { localStorage.setItem(LAB_KEY, JSON.stringify({ form, data })); } catch (e) {}
+  };
+  const handleBlocked = () => {
+    setSavedBlocked(true);
+    try { localStorage.setItem(LAB_KEY, JSON.stringify({ form, blocked: true })); } catch (e) {}
+  };
 
   // Arranca la búsqueda en cuanto el usuario escribe el producto (paso 1) y hace polling
   // en segundo plano mientras llena los pasos 2 y 3 → al llegar a la selección, ya está listo.
@@ -110,17 +141,14 @@ export function LeadMagnetLab({ wrapped = true } = {}) {
     setStage("result");
   };
 
-  const reset = () => {
-    tokenRef.current++;
-    prefetchRef.current = false;
-    setAds(null);
-    setForm({ nombre: "", correo: "", telefono: "", empresa: "", producto: "", link: "", problema: "", pais: "MX" });
-    setSelectedAds([]);
-    setStage("form");
-  };
-
   let inner;
-  if (stage === "form") {
+  if (!ready) {
+    inner = (
+      <div style={{ maxWidth: 820, margin: "0 auto" }}>
+        <div className="cap-pop" style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 22, padding: 48, boxShadow: "0 1px 2px rgba(15,23,42,.04), 0 30px 60px -30px rgba(15,23,42,.2)", display: "flex", justifyContent: "center" }}><span className="cap-spin" /></div>
+      </div>
+    );
+  } else if (stage === "form") {
     inner = <MultiStepForm form={form} setForm={setForm} onSubmit={submit} onProductoReady={startPrefetch} />;
   } else if (stage === "ads") {
     inner = <AdsSelection ads={ads} onConfirm={onAdsConfirm} />;
@@ -132,10 +160,7 @@ export function LeadMagnetLab({ wrapped = true } = {}) {
           <h2 className="cap-display" style={{ ...h2, fontSize: 34 }}>Descubre tus ángulos de venta</h2>
           <p style={{ ...lead, margin: "14px auto 0" }}>Adaptado a los anuncios de la competencia que elegiste.</p>
         </div>
-        <ResultCard form={form} selectedAds={selectedAds} onComplete={() => {}} onBlocked={() => {}} />
-        <div style={{ textAlign: "center", marginTop: 18 }}>
-          <button onClick={reset} style={{ fontSize: 12.5, color: C.slate, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontFamily: "inherit" }}>↺ Probar con otro producto</button>
-        </div>
+        <ResultCard form={form} selectedAds={selectedAds} initialData={savedData} initialBlocked={savedBlocked} onComplete={handleComplete} onBlocked={handleBlocked} />
       </div>
     );
   }
@@ -461,7 +486,7 @@ function ResultCard({ form, initialData, initialBlocked, onComplete, onBlocked, 
         const res = await fetch("/api/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...form, selectedAds: selectedAds || [], test: true }),
+          body: JSON.stringify({ ...form, selectedAds: selectedAds || [] }),
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(json.error || `Error ${res.status}`);
