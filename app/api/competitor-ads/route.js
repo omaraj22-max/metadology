@@ -146,7 +146,8 @@ async function pollRun(runId, debug, producto) {
   );
   const items = await di.json().catch(() => null);
   const arr = Array.isArray(items) ? items : [];
-  let ads = arr.map(mapAd).filter((a) => a.pagina || a.copy || a.titulo || a.imagen);
+  // Solo anuncios de IMAGEN (con imagen y que no sean video): los prompts son de estático.
+  let ads = arr.map(mapAd).filter((a) => !a.esVideo && a.imagen && (a.pagina || a.copy || a.titulo));
   ads.sort((a, b) => (a.inicio || "9999").localeCompare(b.inicio || "9999"));
   const rawMapped = ads.length;
   ads = await filterRelevant(ads, producto);
