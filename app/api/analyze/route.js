@@ -287,6 +287,48 @@ RESPONDE ÚNICAMENTE CON JSON VÁLIDO, sin markdown, sin backticks, sin texto an
 REGLA ANUNCIOS: genera EXACTAMENTE 2 anuncios estáticos de muestra, de 2 ángulos distintos (uno frío, uno medio). El copy_out aplica la fórmula completa Hook→Valor→Oferta. Son muestra: NO generes anuncios para todos los ángulos.${adsReference(selectedAds)}`;
 }
 
+// Repara JSON posiblemente truncado (corte por tokens): cierra la cadena/llaves/corchetes
+// abiertos y, si aún no parsea, recorta el último elemento incompleto hasta lograrlo.
+function closeOpenStructures(s) {
+  if (!s) return null;
+  const stack = [];
+  let inStr = false, esc = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (c === "\\") esc = true;
+      else if (c === '"') inStr = false;
+      continue;
+    }
+    if (c === '"') inStr = true;
+    else if (c === "{" || c === "[") stack.push(c);
+    else if (c === "}" || c === "]") stack.pop();
+  }
+  let out = s;
+  if (inStr) out += '"';
+  out = out.replace(/,\s*$/, "");
+  for (let i = stack.length - 1; i >= 0; i--) out += stack[i] === "{" ? "}" : "]";
+  return out;
+}
+
+function tryRepairJson(s) {
+  if (!s) return null;
+  const str = String(s).trim();
+  const last = Math.max(str.lastIndexOf("}"), str.lastIndexOf("]"));
+  for (const cand of [str, closeOpenStructures(str), closeOpenStructures(str.slice(0, last + 1))]) {
+    if (!cand) continue;
+    try { return JSON.parse(cand); } catch {}
+  }
+  let cut = str;
+  for (let i = 0; i < 200 && cut.length > 50; i++) {
+    const comma = cut.lastIndexOf(",");
+    cut = cut.slice(0, comma >= 0 ? comma : cut.length - 1);
+    try { return JSON.parse(closeOpenStructures(cut)); } catch {}
+  }
+  return null;
+}
+
 export async function POST(req) {
   let form;
   try {
@@ -402,7 +444,7 @@ export async function POST(req) {
     // tumba al principal: si falla, su promesa resuelve a null.
     const mainPromise = client.messages.create({
       model,
-      max_tokens: 5000, // 2 prompts largos por anuncio (estático + ChatGPT) necesitan más espacio
+      max_tokens: 8000, // 2 prompts largos por anuncio (estático + ChatGPT) + persona + ángulos: evita truncado
       system: buildSystem(form, selectedAds, visualRefs),
       messages: [{ role: "user", content: mainUserContent }],
     });
@@ -427,10 +469,16 @@ export async function POST(req) {
     try {
       data = parseJson(textOf(msg));
     } catch {
-      return Response.json(
-        { error: "La IA no devolvió JSON válido. Intenta de nuevo." },
-        { status: 502 }
-      );
+      // Respaldo: si vino truncado (corte por tokens) intentamos reparar y rescatar lo generado.
+      const text = textOf(msg);
+      const a = text.indexOf("{");
+      data = tryRepairJson(a >= 0 ? text.slice(a) : text);
+      if (!data || !data.persona || !Array.isArray(data.angulos)) {
+        return Response.json(
+          { error: "La IA no devolvió JSON válido. Intenta de nuevo." },
+          { status: 502 }
+        );
+      }
     }
 
     if (compMsg) {
