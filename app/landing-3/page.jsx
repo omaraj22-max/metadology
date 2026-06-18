@@ -2,7 +2,7 @@
 
 import React, { useEffect } from "react";
 import "../components/landing2.css";
-import { LeadMagnet } from "../components/lead-magnet";
+import { LeadMagnetLab } from "../components/lead-magnet-lab";
 
 export default function Landing3Page() {
   // Reveal on scroll
@@ -393,7 +393,7 @@ export default function Landing3Page() {
             Cada semana que corres campañas sin el ángulo correcto estás pagando el costo de no saber. Y ese costo, en publicidad, nunca para.
           </p>
           <div className="reveal" data-d="2" style={{ textAlign: "left", marginTop: "var(--s12)" }}>
-            <LeadMagnet wrapped={false} competitive />
+            <LeadMagnetLab wrapped={false} />
           </div>
           <p className="cta-micro reveal" data-d="3" style={{ marginTop: "var(--s12)" }}>
             Metadology no es para el que busca que alguien más le resuelva la vida. Es para el que quiere entender su negocio y moverlo con criterio.

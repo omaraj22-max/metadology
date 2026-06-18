@@ -198,7 +198,8 @@ export async function POST(req) {
   }
 
   // CANDADO SERVER-SIDE: si este correo ya usó su análisis gratis, bloquear.
-  if (await emailAlreadyUsed(correo)) {
+  // form.test (solo /landing-3 en modo prueba) salta el candado para poder probar repetido.
+  if (!form.test && (await emailAlreadyUsed(correo))) {
     return Response.json({ blocked: true });
   }
 
