@@ -1,8 +1,38 @@
+import Anthropic from "@anthropic-ai/sdk";
+
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const APIFY_TOKEN = process.env.APIFY_TOKEN || "";
 const APIFY_ACTOR = "automation-lab~facebook-ads-library";
+
+// Convierte el texto libre del usuario en una búsqueda corta para la Ad Library.
+// El usuario escribe descripciones largas, vagas o fuera de tema; Claude extrae el término.
+async function deriveKeyword(producto) {
+  const txt = String(producto || "").trim();
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey || !txt) return txt.slice(0, 60);
+  try {
+    const client = new Anthropic({ apiKey });
+    const msg = await client.messages.create({
+      model: process.env.ANTHROPIC_COMPETITIVE_MODEL || "claude-haiku-4-5-20251001",
+      max_tokens: 24,
+      system:
+        "Del texto que escribe un negocio sobre lo que vende, devuelve ÚNICAMENTE una búsqueda corta (1-4 palabras, español) para encontrar anuncios de su COMPETENCIA en la biblioteca de anuncios de Meta. Solo el término de búsqueda: sin comillas, sin etiquetas, sin explicación. Usa el sustantivo/categoría principal del producto o servicio (no la marca propia del usuario). Si el texto es muy vago, usa lo más cercano a una categoría comercial.",
+      messages: [{ role: "user", content: txt.slice(0, 800) }],
+    });
+    const kw = msg.content
+      .filter((b) => b.type === "text")
+      .map((b) => b.text)
+      .join(" ")
+      .trim()
+      .replace(/^["'¿¡.\s]+|["'.\s]+$/g, "")
+      .slice(0, 60);
+    return kw || txt.slice(0, 60);
+  } catch (e) {
+    return txt.slice(0, 60);
+  }
+}
 
 function pick(obj, paths) {
   for (const p of paths) {
@@ -93,9 +123,10 @@ async function handle({ producto, runId, country, debug }) {
   try {
     if (runId) return Response.json(await pollRun(runId, debug));
     if (!producto) return Response.json({ ok: false, error: "Falta 'producto' / 'q'." });
-    const { runId: id, startStatus, startRaw } = await startRun(producto, country);
-    if (!id) return Response.json({ ok: false, error: "No se pudo iniciar el run de Apify.", startStatus, startRaw });
-    return Response.json({ ok: true, runId: id, status: "RUNNING" });
+    const keyword = await deriveKeyword(producto);
+    const { runId: id, startStatus, startRaw } = await startRun(keyword, country);
+    if (!id) return Response.json({ ok: false, error: "No se pudo iniciar el run de Apify.", keyword, startStatus, startRaw });
+    return Response.json({ ok: true, runId: id, keyword, status: "RUNNING" });
   } catch (e) {
     return Response.json({ ok: false, error: String(e?.message || e) });
   }

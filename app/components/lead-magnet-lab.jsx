@@ -59,6 +59,38 @@ export function LeadMagnetLab({ wrapped = true } = {}) {
   const [stage, setStage] = useState("form"); // form | ads | result
   const [form, setForm] = useState({ nombre: "", correo: "", telefono: "", empresa: "", producto: "", link: "", problema: "" });
   const [selectedAds, setSelectedAds] = useState([]);
+  const [ads, setAds] = useState(null); // null = buscando / no listo · array = resultado
+  const prefetchRef = useRef(false);
+  const tokenRef = useRef(0);
+  const cancelRef = useRef(false);
+  useEffect(() => () => { cancelRef.current = true; }, []);
+
+  // Arranca la búsqueda en cuanto el usuario escribe el producto (paso 1) y hace polling
+  // en segundo plano mientras llena los pasos 2 y 3 → al llegar a la selección, ya está listo.
+  const startPrefetch = async (producto) => {
+    if (prefetchRef.current || !producto) return;
+    prefetchRef.current = true;
+    const myToken = ++tokenRef.current;
+    const alive = () => tokenRef.current === myToken && !cancelRef.current;
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const post = async (body) => {
+      const res = await fetch("/api/competitor-ads", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      return res.json();
+    };
+    try {
+      const started = await post({ producto });
+      const runId = started && started.runId;
+      if (!runId) { if (alive()) setAds([]); return; }
+      for (let i = 0; i < 50 && alive(); i++) {
+        await sleep(3000);
+        if (!alive()) return;
+        const r = await post({ runId });
+        if (r && r.status === "SUCCEEDED") { if (alive()) setAds(Array.isArray(r.ads) ? r.ads : []); return; }
+        if (r && ["FAILED", "ABORTED", "TIMED-OUT", "TIMED_OUT"].includes(r.status)) { if (alive()) setAds([]); return; }
+      }
+      if (alive()) setAds([]);
+    } catch (e) { if (alive()) setAds([]); }
+  };
 
   // Al terminar el form → paso de selección de anuncios de la competencia
   const submit = () => {
@@ -73,12 +105,15 @@ export function LeadMagnetLab({ wrapped = true } = {}) {
   };
 
   // El usuario eligió (o saltó) los anuncios → generar
-  const onAdsConfirm = (ads) => {
-    setSelectedAds(ads || []);
+  const onAdsConfirm = (chosen) => {
+    setSelectedAds(chosen || []);
     setStage("result");
   };
 
   const reset = () => {
+    tokenRef.current++;
+    prefetchRef.current = false;
+    setAds(null);
     setForm({ nombre: "", correo: "", telefono: "", empresa: "", producto: "", link: "", problema: "" });
     setSelectedAds([]);
     setStage("form");
@@ -86,9 +121,9 @@ export function LeadMagnetLab({ wrapped = true } = {}) {
 
   let inner;
   if (stage === "form") {
-    inner = <MultiStepForm form={form} setForm={setForm} onSubmit={submit} />;
+    inner = <MultiStepForm form={form} setForm={setForm} onSubmit={submit} onProductoReady={startPrefetch} />;
   } else if (stage === "ads") {
-    inner = <AdsSelection producto={form.producto} onConfirm={onAdsConfirm} />;
+    inner = <AdsSelection ads={ads} onConfirm={onAdsConfirm} />;
   } else {
     inner = (
       <div style={{ maxWidth: 820, margin: "0 auto" }}>
@@ -115,52 +150,13 @@ export function LeadMagnetLab({ wrapped = true } = {}) {
 }
 
 // =================== SELECCIÓN DE ANUNCIOS DE LA COMPETENCIA ===================
-function AdsSelection({ producto, onConfirm }) {
-  const [loading, setLoading] = useState(true);
-  const [ads, setAds] = useState([]);
+function AdsSelection({ ads, onConfirm }) {
   const [sel, setSel] = useState({});
-
-  useEffect(() => {
-    let cancelled = false;
-    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-    const post = async (body) => {
-      const res = await fetch("/api/competitor-ads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      return res.json();
-    };
-    (async () => {
-      try {
-        // 1) arranca el run async
-        const started = await post({ producto });
-        const runId = started && started.runId;
-        if (!runId) return; // sin token o no arrancó → estado vacío
-        // 2) polling hasta que termine (máx ~2.5 min)
-        for (let i = 0; i < 50 && !cancelled; i++) {
-          await sleep(3000);
-          if (cancelled) return;
-          const r = await post({ runId });
-          if (r && r.status === "SUCCEEDED") {
-            if (!cancelled) setAds(Array.isArray(r.ads) ? r.ads : []);
-            return;
-          }
-          if (r && r.status && ["FAILED", "ABORTED", "TIMED-OUT", "TIMED_OUT"].includes(r.status)) {
-            return; // terminó sin éxito → estado vacío
-          }
-        }
-      } catch (e) {
-        // estado vacío
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+  const loading = ads === null; // la búsqueda corre en segundo plano desde el paso 1
+  const list = Array.isArray(ads) ? ads : [];
 
   const toggle = (i) => setSel((s) => ({ ...s, [i]: !s[i] }));
-  const chosen = ads.filter((_, i) => sel[i]);
+  const chosen = list.filter((_, i) => sel[i]);
 
   return (
     <div className="cap-pop" style={{ maxWidth: 820, margin: "0 auto", background: "#fff", border: `1px solid ${C.border}`, borderRadius: 22, padding: "28px 26px", boxShadow: "0 1px 2px rgba(15,23,42,.04), 0 30px 60px -30px rgba(15,23,42,.2)" }}>
@@ -177,17 +173,17 @@ function AdsSelection({ producto, onConfirm }) {
         </div>
       )}
 
-      {!loading && ads.length === 0 && (
+      {!loading && list.length === 0 && (
         <div style={{ textAlign: "center", padding: "24px 0" }}>
           <p style={{ color: C.slate, fontSize: 14, lineHeight: 1.6, maxWidth: 460, margin: "0 auto 18px" }}>No encontramos anuncios de la competencia para este producto. Puedes continuar y Aria generará tus anuncios igual.</p>
           <button className="cf-btn cf-btn--primary" onClick={() => onConfirm([])}>Generar mis anuncios <ArrowRight size={16} /></button>
         </div>
       )}
 
-      {!loading && ads.length > 0 && (
+      {!loading && list.length > 0 && (
         <>
           <div style={{ display: "grid", gap: 10 }}>
-            {ads.map((ad, i) => (
+            {list.map((ad, i) => (
               <label key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start", border: `1.5px solid ${sel[i] ? C.violet : C.border}`, background: sel[i] ? "rgba(90,58,255,.04)" : "#fff", borderRadius: 12, padding: 12, cursor: "pointer", transition: "border-color .15s, background .15s" }}>
                 <input type="checkbox" checked={!!sel[i]} onChange={() => toggle(i)} style={{ marginTop: 3, width: 16, height: 16, accentColor: C.violet, flexShrink: 0 }} />
                 {ad.imagen ? (
@@ -216,10 +212,11 @@ function AdsSelection({ producto, onConfirm }) {
 }
 
 // =================== MULTISTEP FORM ===================
-function MultiStepForm({ form, setForm, onSubmit }) {
+function MultiStepForm({ form, setForm, onSubmit, onProductoReady }) {
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const prefetchRef = useRef(false);
 
   const set = (k) => (e) => {
     setForm((d) => ({ ...d, [k]: e.target.value }));
@@ -256,6 +253,11 @@ function MultiStepForm({ form, setForm, onSubmit }) {
       startedRef.current = true;
       track("form_start");
       try { if (typeof window !== "undefined" && typeof window.fbq === "function") window.fbq("trackCustom", "FormStart"); } catch (e) {}
+    }
+    // Prefetch de anuncios de la competencia: arranca al dejar el paso 1 (ya hay producto)
+    if (step === 1 && !prefetchRef.current && form.producto.trim() && onProductoReady) {
+      prefetchRef.current = true;
+      onProductoReady(form.producto.trim());
     }
     if (target === 3) track("form_step_3");
     setStep(target);
