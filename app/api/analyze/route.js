@@ -379,7 +379,7 @@ export async function POST(req) {
     // tumba al principal: si falla, su promesa resuelve a null.
     const mainPromise = client.messages.create({
       model,
-      max_tokens: 3000,
+      max_tokens: 5000, // 2 prompts largos por anuncio (estático + ChatGPT) necesitan más espacio
       system: buildSystem(form, selectedAds, visualRefs),
       messages: [{ role: "user", content: mainUserContent }],
     });
