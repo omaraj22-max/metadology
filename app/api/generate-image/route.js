@@ -1,8 +1,10 @@
 export const runtime = "nodejs";
 export const maxDuration = 300; // GPT Image 2 puede tardar; Fluid Compute permite hasta 300s
 
-// fal.ai. Modelo configurable por env. Default: GPT Image 2 de OpenAI en fal.
-const FAL_MODEL = process.env.FAL_IMAGE_MODEL || "openai/gpt-image-2";
+// fal.ai. Modelo configurable por env. Default: el id oficial del API (quick start de fal).
+const FAL_MODEL = process.env.FAL_IMAGE_MODEL || "fal-ai/gpt-image-2";
+const FAL_QUALITY = process.env.FAL_IMAGE_QUALITY || "low"; // low|medium|high (low = rápido y barato)
+const FAL_SIZE = process.env.FAL_IMAGE_SIZE || "square_hd"; // 1024x1024
 
 async function jget(url, headers) {
   const controller = new AbortController();
@@ -40,7 +42,13 @@ export async function POST(req) {
       const sub = await fetch(`https://queue.fal.run/${FAL_MODEL}`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ prompt: String(prompt).slice(0, 4000) }),
+        body: JSON.stringify({
+          prompt: String(prompt).slice(0, 4000),
+          image_size: FAL_SIZE,
+          quality: FAL_QUALITY,
+          num_images: 1,
+          output_format: "jpeg",
+        }),
         signal: subController.signal,
       });
       subj = await sub.json().catch(() => null);
