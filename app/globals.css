@@ -191,6 +191,8 @@ textarea.cf-input { resize: vertical; min-height: 128px; line-height: 1.5; }
   transition: transform 0.12s, box-shadow 0.2s, opacity 0.2s;
 }
 .cf-btn:active { transform: translateY(1px); }
+.cf-btn { -webkit-tap-highlight-color: transparent; outline: none; }
+.cf-btn:focus-visible { outline: 2px solid rgba(90, 58, 255, 0.6); outline-offset: 2px; }
 .cf-btn--primary {
   color: #fff; background: linear-gradient(135deg, #5a3aff, #2563eb);
   box-shadow: 0 8px 20px -6px rgba(90, 58, 255, 0.55);

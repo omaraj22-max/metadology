@@ -163,7 +163,7 @@ export function LeadMagnetLab({ wrapped = true } = {}) {
       <div style={{ maxWidth: 820, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <Eyebrow>Tu análisis</Eyebrow>
-          <h2 className="cap-display" style={{ ...h2, fontSize: 34 }}>Descubre tus ángulos de venta</h2>
+          <h2 className="cap-display" style={{ ...h2, fontSize: "clamp(24px, 6vw, 34px)" }}>Descubre tus ángulos de venta</h2>
           <p style={{ ...lead, margin: "14px auto 0" }}>Adaptado a los anuncios de la competencia que elegiste.</p>
         </div>
         <ResultCard form={form} selectedAds={selectedAds} initialData={savedData} initialBlocked={savedBlocked} onComplete={handleComplete} onBlocked={handleBlocked} />
@@ -193,7 +193,7 @@ function AdsSelection({ ads, onConfirm }) {
     <div className="cap-pop" style={{ maxWidth: 820, margin: "0 auto", background: "#fff", border: `1px solid ${C.border}`, borderRadius: 22, padding: "28px 26px", boxShadow: "0 1px 2px rgba(15,23,42,.04), 0 30px 60px -30px rgba(15,23,42,.2)" }}>
       <div style={{ textAlign: "center", marginBottom: 20 }}>
         <Eyebrow>Paso extra</Eyebrow>
-        <h2 className="cap-display" style={{ ...h2, fontSize: 26 }}>Anuncios de tu competencia</h2>
+        <h2 className="cap-display" style={{ ...h2, fontSize: "clamp(22px, 5.5vw, 26px)" }}>Anuncios de tu competencia</h2>
         <p style={{ ...lead, fontSize: 14.5, margin: "10px auto 0" }}>Elige los que más te gusten. Aria adaptará tus anuncios inspirándose en su estilo, pero con tu mensaje.</p>
       </div>
 
@@ -443,8 +443,8 @@ function StepShell({ eyebrow, title, subtitle, children }) {
   return (
     <div className="cf-fade" key={title}>
       <span style={{ fontSize: 12.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: C.violet }}>{eyebrow}</span>
-      <h1 className="cap-display" style={{ fontSize: 30, fontWeight: 700, margin: "8px 0 6px", color: C.ink, letterSpacing: "-0.02em" }}>{title}</h1>
-      <p style={{ margin: "0 0 30px", fontSize: 15, color: C.slate, lineHeight: 1.5, maxWidth: 520 }}>{subtitle}</p>
+      <h1 className="cap-display" style={{ fontSize: "clamp(22px, 5.5vw, 30px)", fontWeight: 700, margin: "8px 0 6px", color: C.ink, letterSpacing: "-0.02em", lineHeight: 1.15 }}>{title}</h1>
+      <p style={{ margin: "0 0 28px", fontSize: 14.5, color: C.slate, lineHeight: 1.5, maxWidth: 520 }}>{subtitle}</p>
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>{children}</div>
     </div>
   );
