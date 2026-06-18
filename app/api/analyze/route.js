@@ -136,7 +136,7 @@ async function toImageBlock(url) {
     const res = await fetch(url, { signal: controller.signal, headers: { "User-Agent": "Mozilla/5.0" } });
     if (!res.ok) return null;
     const ct = (res.headers.get("content-type") || "").split(";")[0].trim();
-    if (!ct.startsWith("image/")) return null;
+    if (!["image/jpeg", "image/png", "image/gif", "image/webp"].includes(ct)) return null;
     const buf = Buffer.from(await res.arrayBuffer());
     if (!buf.length || buf.length > 4_500_000) return null; // límite ~5MB de Anthropic
     return { type: "image", source: { type: "base64", media_type: ct, data: buf.toString("base64") } };
@@ -147,24 +147,51 @@ async function toImageBlock(url) {
   }
 }
 
-// Saca el look & feel del sitio del usuario: la og:image (o twitter:image) de su link.
-async function fetchSiteImage(link) {
-  if (!link || !/^https?:\/\//i.test(link)) return "";
+// Junta el "moodboard" de la marca del usuario: logo, og:image e imágenes destacadas del sitio.
+// Devuelve una lista de URLs candidatas (luego toImageBlock valida cada una).
+async function fetchSiteVisuals(link) {
+  if (!link || !/^https?:\/\//i.test(link)) return [];
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 6000);
+  const timer = setTimeout(() => controller.abort(), 7000);
   try {
     const res = await fetch(link, { signal: controller.signal, headers: { "User-Agent": "Mozilla/5.0" } });
-    if (!res.ok) return "";
-    const html = (await res.text()).slice(0, 200000);
-    const m =
-      html.match(/<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)["'][^>]+content=["']([^"']+)["']/i) ||
-      html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image|twitter:image)["']/i);
-    let url = m ? m[1] : "";
-    if (url.startsWith("//")) url = "https:" + url;
-    else if (url.startsWith("/")) { try { url = new URL(url, link).href; } catch (e) {} }
-    return url;
+    if (!res.ok) return [];
+    const base = res.url || link;
+    const html = (await res.text()).slice(0, 300000);
+    const urls = [];
+    const push = (u) => {
+      if (!u) return;
+      u = u.trim();
+      if (!u || u.startsWith("data:")) return;
+      try { u = new URL(u, base).href; } catch (e) { return; }
+      if (/\.svg(\?|$)/i.test(u)) return; // Claude no soporta SVG
+      if (!urls.includes(u)) urls.push(u);
+    };
+    // og/twitter image
+    let m = html.match(/<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)["'][^>]+content=["']([^"']+)["']/i);
+    if (m) push(m[1]);
+    // logo / apple-touch-icon
+    m = html.match(/<link[^>]+rel=["'][^"']*apple-touch-icon[^"']*["'][^>]+href=["']([^"']+)["']/i);
+    if (m) push(m[1]);
+    // <img> del sitio: prioriza los que parecen logo, luego los primeros destacados
+    const logos = [];
+    const others = [];
+    const imgRe = /<img\b[^>]*>/gi;
+    let im;
+    let n = 0;
+    while ((im = imgRe.exec(html)) && n < 50) {
+      n++;
+      const tag = im[0];
+      const src = (tag.match(/\bsrc=["']([^"']+)["']/i) || [])[1] || (tag.match(/\bdata-src=["']([^"']+)["']/i) || [])[1];
+      if (!src) continue;
+      if (/logo/i.test(tag)) logos.push(src);
+      else others.push(src);
+    }
+    logos.slice(0, 1).forEach(push);
+    others.slice(0, 3).forEach(push);
+    return urls.slice(0, 4);
   } catch (e) {
-    return "";
+    return [];
   } finally {
     clearTimeout(timer);
   }
@@ -189,7 +216,7 @@ ${list}`;
 
 function promptFieldInstruction(visualRefs) {
   if (visualRefs) {
-    return `prompt self-contained para generar el estático. La DIRECCIÓN VISUAL debe basarse en las IMÁGENES DE REFERENCIA adjuntas: (a) los anuncios que el cliente eligió de su competencia y (b) el look & feel del sitio web del cliente. Replica el tipo de composición, la paleta de colores, el estilo (fotográfico/gráfico/ilustrado), la tipografía y el tono de esas referencias, adaptado a la marca y el mensaje del cliente (no copies sus textos). Describe la escena/composición, la paleta, la tipografía y el titular, e incluye TODO el texto que va baked-in entre comillas tal cual. Cierra con: No inventes textos extra.`;
+    return `prompt self-contained para generar el estático. La DIRECCIÓN VISUAL debe combinar: (a) el MOODBOARD de la marca del cliente —paleta, tipografía, estilo y mood que infieres del logo e imágenes de su sitio adjuntas— y (b) el formato/composición de los anuncios de la competencia que eligió. El estático debe verse ON-BRAND (con la identidad del cliente) y a la altura de esos anuncios, adaptado al mensaje del cliente (no copies sus textos). Describe la escena/composición, la paleta exacta, la tipografía y el titular, e incluye TODO el texto que va baked-in entre comillas tal cual. Cierra con: No inventes textos extra.`;
   }
   return `prompt self-contained para generar el estático: escena fotográfica premium (NO vector plano, NO fondo oscuro salvo marca), luminoso y aireado; describe la composición, la palabra-fantasma gigante ghosted de fondo si aplica, el titular limpio con keyword en color de acento, y TODO el texto que va baked-in entre comillas tal cual. Cierra con: No inventes textos extra.`;
 }
@@ -314,22 +341,26 @@ export async function POST(req) {
 
   // Imágenes de referencia (solo /landing-3): anuncios elegidos + look&feel del sitio del cliente.
   // Se le pasan a Claude (visión) para que base la dirección visual de los prompts en ese estilo.
-  let imageBlocks = [];
+  let adBlocks = [];
+  let brandBlocks = [];
   if (selectedAds.length) {
-    const adUrls = selectedAds.map((a) => a.imagen).filter((u) => u && /^https?:/i.test(u)).slice(0, 4);
-    const siteImg = await fetchSiteImage(form.link);
-    const refUrls = siteImg ? [...adUrls, siteImg] : adUrls;
-    imageBlocks = (await Promise.all(refUrls.map(toImageBlock))).filter(Boolean);
+    const adUrls = selectedAds.map((a) => a.imagen).filter((u) => u && /^https?:/i.test(u)).slice(0, 3);
+    const siteUrls = (await fetchSiteVisuals(form.link)).slice(0, 3);
+    [adBlocks, brandBlocks] = await Promise.all([
+      Promise.all(adUrls.map(toImageBlock)).then((a) => a.filter(Boolean)),
+      Promise.all(siteUrls.map(toImageBlock)).then((a) => a.filter(Boolean)),
+    ]);
   }
-  const visualRefs = imageBlocks.length > 0;
+  const visualRefs = adBlocks.length > 0 || brandBlocks.length > 0;
   const mainUserContent = visualRefs
     ? [
         {
           type: "text",
           text:
-            "Genera el buyer persona y los ángulos en el JSON especificado. Te adjunto imágenes de referencia: anuncios de la competencia que le gustaron al cliente y el look & feel de su sitio. Basa la dirección visual de los prompts de imagen en ESE estilo.",
+            "Genera el buyer persona y los ángulos en el JSON especificado.\n\nIMÁGENES DE REFERENCIA:\n• Marca del cliente (logo e imágenes de su sitio): infiere un MOODBOARD —paleta, tipografía, estilo y mood— de estas imágenes.\n• Anuncios de la competencia que el cliente eligió: úsalos como referencia de formato/composición.\nBasa la dirección visual de cada 'prompt' en el moodboard de la marca + el estilo de esos anuncios, para que el estático se vea on-brand y a la altura de la competencia.",
         },
-        ...imageBlocks,
+        ...(brandBlocks.length ? [{ type: "text", text: "— Marca del cliente:" }, ...brandBlocks] : []),
+        ...(adBlocks.length ? [{ type: "text", text: "— Anuncios de la competencia seleccionados:" }, ...adBlocks] : []),
       ]
     : "Genera el buyer persona y los ángulos en el JSON especificado.";
 
