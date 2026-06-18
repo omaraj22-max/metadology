@@ -34,7 +34,16 @@ CONTEXTO DEL CLIENTE:
 
 PREMISA: Meta premia DIVERSIDAD de conceptos genuinamente distintos = 1 Entity ID = 1 boleto a la subasta. Cada creativo ataca una motivación/ángulo/formato distinto, NO variaciones del mismo. Fórmula de cada ad: HOOK (0-3s, engancha Y filtra) → VALOR (agita el dolor + prueba/autoridad/"bandera") → OFERTA (CTA).
 
-TAREA: genera EXACTAMENTE 10 creativos cubriendo embudo frío, medio y caliente, en 3 formatos: ~6 estáticos, 2 carruseles y 2 UGC (video 9:16). Ángulos genuinamente distintos. Para estáticos incluye un "prompt" de imagen on-brand (sin logo ni marcas de agua). Para UGC incluye un "script" por tomas. Para carruseles incluye el desglose de slides.
+RECETA VISUAL (CRÍTICO — de esto depende que las imágenes salgan BONITAS, no feas):
+Principio común de las referencias aprobadas: estética FOTOGRÁFICA y PREMIUM, NUNCA vector plano ni clipart ni 3D barato; luminoso y aireado; composición limpia y respirada con foco claro; titular corto arriba con UNA palabra clave en el color de acento de la marca; nada de fondos oscuros salvo que la marca lo dicte. Texto baked-in dentro de la imagen con tipografía sans premium, bien kerneada. SIN logotipos ni marcas de agua (usa la identidad visual —colores, estilo, tipografía— pero NO renderices el logo).
+
+Infiere el ARQUETIPO del producto y aplica su receta:
+• SaaS / digital → escena real (laptop o teléfono sobre escritorio claro con planta, taza, luz natural) con el dashboard/app en pantalla; opcional una PALABRA-FANTASMA gigante "ghosted" de fondo (ej. SIMPLE, CONTROL, ORDEN). Si es estilo gráfico: tarjetas blancas redondeadas con sombra suave e íconos lineales, ordenado y data-forward. Nada oscuro.
+• Infoproducto → mockup fotográfico del libro/app + props aspiracionales (vela, lavanda, luz cálida) en la paleta de marca; estética emocional, no de dato; palabra-fantasma emocional (SIENTE, CREA…).
+• Físico / consumo → bodegón premium del producto real en escena + lifestyle (persona disfrutándolo, luz cálida); el producto siempre presente y nítido; beneficio sensorial.
+Cada prompt cierra el acabado: "foto editorial premium, luz natural suave, alta nitidez, look de revista".
+
+TAREA: genera EXACTAMENTE 10 creativos cubriendo embudo frío, medio y caliente, en 3 formatos: ~6 estáticos, 2 carruseles y 2 UGC (video 9:16). Ángulos genuinamente distintos. Para estáticos incluye un "prompt" de imagen FOTORREALISTA y premium siguiendo la RECETA VISUAL (sin logo ni marcas de agua). Para UGC incluye un "script" por tomas. Para carruseles incluye el desglose de slides con su prompt visual.
 
 RESPONDE ÚNICAMENTE JSON VÁLIDO (sin markdown, sin backticks, sin texto extra). Estructura EXACTA:
 {
@@ -67,9 +76,9 @@ RESPONDE ÚNICAMENTE JSON VÁLIDO (sin markdown, sin backticks, sin texto extra)
       "hook": "frase 0-3s que engancha y filtra",
       "copy_out": "copy completo Hook→Valor→Oferta, 3-6 líneas, listo para pegar en Meta",
       "cta": "tipo de CTA (Cómo llegar / Más información / Comprar / etc.)",
-      "prompt": "SOLO si es estático: prompt self-contained on-brand para el estático, sin logo ni marcas de agua, con todo el texto baked-in entre comillas",
+      "prompt": "SOLO si es estático: prompt self-contained FOTORREALISTA y premium siguiendo la RECETA VISUAL y el arquetipo del producto. Describe escena, encuadre, luz y lente; la paleta EXACTA con los hex de la marca; composición aireada; el titular con keyword en color de acento y TODO el texto que va baked-in entre comillas tal cual. Acabado editorial de revista, alta nitidez. SIN logotipos ni marcas de agua. Cierra con: No inventes textos extra ni logos.",
       "script": [{ "t": "0-3s", "linea": "lo que dice", "pantalla": "texto en pantalla" }],
-      "carrusel": [{ "n": 1, "desc": "qué muestra y el texto de la slide", "prompt": "prompt self-contained on-brand para la imagen de ESTA slide del carrusel, sin logo ni marcas de agua, con el texto de la slide baked-in entre comillas. Cierra con: No inventes textos extra." }]
+      "carrusel": [{ "n": 1, "desc": "qué muestra y el texto de la slide", "prompt": "prompt self-contained FOTORREALISTA y premium para la imagen de ESTA slide, siguiendo la RECETA VISUAL y el arquetipo. Describe escena, luz y lente; la paleta EXACTA de marca; composición limpia y coherente con las demás slides; y el texto de la slide baked-in entre comillas tal cual. Acabado editorial, alta nitidez. SIN logos ni marcas de agua. Cierra con: No inventes textos extra ni logos." }]
     }
   ],
   "receta_visual": ["lineamiento visual 1", "lineamiento 2"],

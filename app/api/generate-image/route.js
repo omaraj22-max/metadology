@@ -3,7 +3,7 @@ export const maxDuration = 300; // GPT Image 2 puede tardar; Fluid Compute permi
 
 // fal.ai. Modelo configurable por env. Default: el id oficial del API (quick start de fal).
 const FAL_MODEL = process.env.FAL_IMAGE_MODEL || "fal-ai/gpt-image-2";
-const FAL_QUALITY = process.env.FAL_IMAGE_QUALITY || "low"; // low|medium|high (low = rápido y barato)
+const FAL_QUALITY = process.env.FAL_IMAGE_QUALITY || "medium"; // low|medium|high — medium = buen balance calidad/velocidad (low se ve feo). La cola con polling aguanta high si se sube por env.
 const FAL_SIZE = process.env.FAL_IMAGE_SIZE || "square_hd"; // 1024x1024
 
 async function jget(url, headers) {
