@@ -4,6 +4,18 @@ export const maxDuration = 120;
 // fal.ai. Modelo configurable por env. Default: GPT Image 2 de OpenAI en fal.
 const FAL_MODEL = process.env.FAL_IMAGE_MODEL || "openai/gpt-image-2";
 
+async function jget(url, headers) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(url, { headers, signal: controller.signal });
+    const json = await res.json().catch(() => null);
+    return { ok: res.ok, status: res.status, json };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function POST(req) {
   const FAL_KEY = process.env.FAL_KEY || process.env.FAL_API_KEY || "";
   if (!FAL_KEY) {
@@ -16,26 +28,59 @@ export async function POST(req) {
     return Response.json({ error: "Falta 'prompt'." }, { status: 400 });
   }
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 110000);
+  const headers = { Authorization: `Key ${FAL_KEY}`, "Content-Type": "application/json" };
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
   try {
-    const res = await fetch(`https://fal.run/${FAL_MODEL}`, {
-      method: "POST",
-      headers: { Authorization: `Key ${FAL_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: String(prompt).slice(0, 4000), num_images: 1 }),
-      signal: controller.signal,
-    });
-    const json = await res.json().catch(() => null);
-    if (!res.ok) {
-      return Response.json(
-        { error: json?.detail || json?.error || `fal ${res.status}` },
-        { status: 502 }
-      );
+    // 1) Submit a la cola (respuesta inmediata con request_id + urls).
+    const subController = new AbortController();
+    const subTimer = setTimeout(() => subController.abort(), 15000);
+    let subj;
+    try {
+      const sub = await fetch(`https://queue.fal.run/${FAL_MODEL}`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ prompt: String(prompt).slice(0, 4000) }),
+        signal: subController.signal,
+      });
+      subj = await sub.json().catch(() => null);
+      if (!sub.ok) {
+        return Response.json(
+          { error: subj?.detail || subj?.error || `fal ${sub.status}` },
+          { status: 502 }
+        );
+      }
+    } finally {
+      clearTimeout(subTimer);
     }
+    const statusUrl = subj?.status_url;
+    const responseUrl = subj?.response_url;
+    if (!statusUrl || !responseUrl) {
+      return Response.json({ error: "fal no devolvió status/response url." }, { status: 502 });
+    }
+
+    // 2) Polling del estado (cada 2.5s, máx ~100s).
+    let done = false;
+    for (let i = 0; i < 40; i++) {
+      await sleep(2500);
+      const st = await jget(statusUrl, headers).catch(() => null);
+      const status = st?.json?.status;
+      if (status === "COMPLETED") { done = true; break; }
+      if (status && !["IN_QUEUE", "IN_PROGRESS"].includes(status)) {
+        return Response.json({ error: `fal status ${status}` }, { status: 502 });
+      }
+    }
+    if (!done) {
+      return Response.json({ error: "fal tardó demasiado (timeout)." }, { status: 504 });
+    }
+
+    // 3) Resultado.
+    const r = await jget(responseUrl, headers);
+    const rj = r.json;
     const url =
-      json?.images?.[0]?.url ||
-      json?.image?.url ||
-      (Array.isArray(json?.images) && typeof json.images[0] === "string" ? json.images[0] : "") ||
+      rj?.images?.[0]?.url ||
+      rj?.image?.url ||
+      (Array.isArray(rj?.images) && typeof rj.images[0] === "string" ? rj.images[0] : "") ||
       "";
     if (!url) {
       return Response.json({ error: "fal no devolvió imagen." }, { status: 502 });
@@ -43,7 +88,5 @@ export async function POST(req) {
     return Response.json({ url });
   } catch (e) {
     return Response.json({ error: String(e?.message || e) }, { status: 502 });
-  } finally {
-    clearTimeout(timer);
   }
 }
