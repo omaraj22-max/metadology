@@ -12,15 +12,26 @@ const SHEET_URL =
 
 // ¿El correo ya generó un análisis antes? (revisión contra el Sheet)
 // Fail-open: si el Sheet no responde, NO bloqueamos (no romper el producto por una caída).
+async function sheetFetch(body, ms) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(SHEET_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      redirect: "follow",
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function emailAlreadyUsed(correo) {
   if (!SHEET_URL || !correo) return false;
   try {
-    const res = await fetch(SHEET_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "check", correo }),
-      redirect: "follow",
-    });
+    const res = await sheetFetch({ action: "check", correo }, 8000);
     if (!res.ok) return false;
     const json = await res.json();
     return json && json.used === true;
@@ -33,16 +44,7 @@ async function emailAlreadyUsed(correo) {
 async function recordLead(form) {
   if (!SHEET_URL) return;
   try {
-    await fetch(SHEET_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "lead",
-        ...form,
-        fecha: new Date().toISOString(),
-      }),
-      redirect: "follow",
-    });
+    await sheetFetch({ action: "lead", ...form, fecha: new Date().toISOString() }, 8000);
   } catch (e) {
     // registrar no debe romper la respuesta del análisis
   }
@@ -220,9 +222,9 @@ export async function POST(req) {
     return Response.json({ blocked: true });
   }
 
-  // Capturamos el lead LO ANTES POSIBLE: antes incluso del gate de la API key.
-  // Si falta la key o Claude falla, el contacto igual queda guardado en el Sheet.
-  await recordLead({
+  // Capturamos el lead en PARALELO con la generación (no antes), para no sumar su latencia
+  // al presupuesto de tiempo. Si falta la key o Claude falla, el contacto igual queda guardado.
+  const leadPromise = recordLead({
     nombre: form.nombre,
     correo: form.correo,
     telefono: form.telefono,
@@ -234,13 +236,15 @@ export async function POST(req) {
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
+    await leadPromise.catch(() => {});
     return Response.json(
       { error: "Falta ANTHROPIC_API_KEY en el servidor." },
       { status: 500 }
     );
   }
 
-  const client = new Anthropic({ apiKey });
+  // maxRetries bajo: evita que un reintento del SDK estire la llamada más allá del límite de Vercel.
+  const client = new Anthropic({ apiKey, maxRetries: 1 });
   const model = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
 
   // Anuncios de competencia que el usuario seleccionó (vienen del paso de selección).
@@ -282,7 +286,9 @@ export async function POST(req) {
           .catch(() => null)
       : Promise.resolve(null);
 
-    const [msg, compMsg] = await Promise.all([mainPromise, compPromise]);
+    // leadPromise va en el all para garantizar que se registre (recordLead nunca rechaza
+    // y termina antes que Claude, así que no suma tiempo).
+    const [msg, compMsg] = await Promise.all([mainPromise, compPromise, leadPromise]);
 
     let data;
     try {
