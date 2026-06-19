@@ -24,7 +24,9 @@
   --ease:cubic-bezier(.16,1,.3,1);
 }
 
-.cfl3 *{box-sizing:border-box;margin:0;padding:0}
+/* OJO: NO usar `.cfl3 *{margin:0;padding:0}` — empata en especificidad con .cf-btn/.cf-input
+   y, al cargar después de globals.css, les borraba el padding y rompía el formulario.
+   El reset global de globals.css (`*{box-sizing;margin:0;padding:0}`) ya da la base. */
 .cfl3{
   font-family:'Inter',system-ui,sans-serif;
   color:var(--ink);
