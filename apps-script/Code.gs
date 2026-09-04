@@ -1,24 +1,45 @@
 /**
- * Caperifai · Captura de leads + candado por correo (1 análisis gratis por persona)
+ * Caperifai · Apps Script del Google Sheet
  *
- * Pega este código en tu proyecto de Apps Script (el del Web App /exec que ya tienes),
- * y vuelve a desplegar como Web App con acceso "Cualquier persona".
+ * Pega este código COMPLETO en el proyecto de Apps Script del Web App /exec que ya usa el sitio
+ * y vuelve a desplegar: Implementar → Administrar implementaciones → ✎ → Versión: "Nueva versión" → Implementar.
+ * (Así la URL /exec se conserva y no hay que cambiar nada en Vercel.)
  *
- * Soporta dos acciones vía POST (JSON):
- *   { "action": "check", "correo": "x@y.com" }  -> { ok:true, used:true|false }
- *   { "action": "lead",  ...campos del form }   -> { ok:true, used:false } (o duplicate:true)
- *
- * El backend de Next.js (/api/analyze) llama "check" antes de generar y "lead" al terminar.
+ * Acciones vía POST (JSON):
+ *   { "action": "check", "correo": "x@y.com" }   -> { ok:true, used:true|false }        (formulario web)
+ *   { "action": "lead",  ...campos del form }     -> { ok:true, used:false }              (formulario web)
+ *   { "action": "wa_upsert", ...conversación }    -> { ok:true, row:N }                   (WhatsApp: una fila por conversación, se actualiza)
  */
 
+// ===== Formulario web (pestaña "Leads") =====
 const SHEET_NAME = "Leads";
 const HEADERS = ["fecha", "nombre", "correo", "telefono", "empresa", "producto", "link", "problema"];
+
+// ===== WhatsApp (pestaña "WhatsApp") =====
+const WA_SHEET = "WhatsApp";
+const WA_HEADERS = [
+  "convId", "telefono", "nombre", "inicio", "ultimaActividad", "status", "etapa",
+  "producto", "link", "pais", "problema", "marca",
+  "resultadoUrl", "moodboardUrl", "adUrl", "hook", "error", "mensajes", "transcript",
+];
 
 function getSheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sh = ss.getSheetByName(SHEET_NAME);
   if (!sh) sh = ss.insertSheet(SHEET_NAME);
   if (sh.getLastRow() === 0) sh.appendRow(HEADERS);
+  return sh;
+}
+
+function getWaSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName(WA_SHEET);
+  if (!sh) sh = ss.insertSheet(WA_SHEET);
+  if (sh.getLastRow() === 0) {
+    sh.appendRow(WA_HEADERS);
+    sh.setFrozenRows(1);
+    sh.getRange(1, 1, 1, WA_HEADERS.length).setFontWeight("bold");
+  }
   return sh;
 }
 
@@ -41,12 +62,47 @@ function emailExists(sh, email) {
   return false;
 }
 
+// Una fila por conversación de WhatsApp (clave: convId). Si existe, se actualiza; si no, se agrega.
+function waUpsert(body) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sh = getWaSheet();
+    const row = WA_HEADERS.map(function (h) {
+      const v = body[h];
+      if (v === undefined || v === null) return "";
+      return typeof v === "string" ? v.slice(0, 49000) : v;
+    });
+    const last = sh.getLastRow();
+    let target = 0;
+    if (last >= 2) {
+      const ids = sh.getRange(2, 1, last - 1, 1).getValues();
+      for (let i = 0; i < ids.length; i++) {
+        if (String(ids[i][0]) === String(body.convId)) { target = i + 2; break; }
+      }
+    }
+    if (target) {
+      sh.getRange(target, 1, 1, WA_HEADERS.length).setValues([row]);
+    } else {
+      sh.appendRow(row);
+      target = sh.getLastRow();
+    }
+    return { ok: true, row: target };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function doPost(e) {
   try {
     const body = JSON.parse((e && e.postData && e.postData.contents) || "{}");
-    const sh = getSheet();
     const action = body.action || "lead";
 
+    if (action === "wa_upsert") {
+      return jsonOut(waUpsert(body));
+    }
+
+    const sh = getSheet();
     if (action === "check") {
       return jsonOut({ ok: true, used: emailExists(sh, body.correo) });
     }
@@ -67,5 +123,5 @@ function doPost(e) {
 }
 
 function doGet() {
-  return jsonOut({ ok: true, service: "caperifai-leads" });
+  return jsonOut({ ok: true, service: "caperifai-leads", whatsapp: true });
 }
