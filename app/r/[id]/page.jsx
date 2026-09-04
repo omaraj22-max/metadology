@@ -3,6 +3,7 @@ import { kvGet, K } from "@/lib/store";
 import { getSetting } from "@/lib/settings";
 import { STAGES, resultState } from "@/lib/result";
 import LiveRefresh from "./LiveRefresh";
+import CopyButton from "./CopyButton";
 import "../result.css";
 
 const STEP_INFO = {
@@ -259,20 +260,108 @@ export default async function ResultPage({ params }) {
             <p className="sub">Cada ángulo es un mensaje genuinamente distinto: 1 ángulo = 1 Entity ID = 1 boleto a la subasta de Meta.</p>
             <div className="mr-table-wrap">
               <table className="mr-table">
-                <thead><tr><th>#</th><th>Lente</th><th>Big idea</th><th>Dolor / deseo</th><th>Trigger</th><th>Etapa</th></tr></thead>
+                <thead><tr><th>#</th><th>Ángulo</th><th>Big idea</th><th>Dolor / deseo</th><th>Talón de Aquiles</th><th>Trigger</th><th>Etapa</th></tr></thead>
                 <tbody>
                   {cp.angulos.map((a, i) => (
                     <tr key={i}>
                       <td>{i === (cp.anguloElegidoIndex ?? 0) ? <span className="mr-tag winner">C1</span> : i + 1}</td>
-                      <td><b>{a.lente}</b></td>
+                      <td><b>{a.lente}</b>{Array.isArray(a.mezcla) && a.mezcla.length > 0 && <div className="mr-mezcla" style={{ marginTop: 4 }}>{a.mezcla.map((m) => <span key={m}>{m}</span>)}</div>}</td>
                       <td>{a.bigIdea}</td>
                       <td>{a.dolor}</td>
+                      <td>{a.talonAquiles || "—"}</td>
                       <td>{a.triggerWord}</td>
                       <td><span className={`mr-tag ${temp(a.temperatura)}`}>{a.temperatura}</span>{a.consciencia ? <div style={{ fontSize: 11, color: "#64748B", marginTop: 3 }}>{a.consciencia}</div> : null}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+          </section>
+        )}
+
+        {(cp.titulares?.length > 0 || cp.textoPrincipal) && (
+          <section className="mr-section">
+            <h2>El copy completo, listo para Ads Manager</h2>
+            <p className="sub">Titular ganador (va dentro del creativo), texto principal {cp.estructuraCopy ? `en estructura ${cp.estructuraCopy}` : ""} y los campos reales de Meta con su conteo.</p>
+            <div className="mr-grid" style={{ marginTop: 0 }}>
+              <div className="mr-card">
+                <h2>5 titulares — fórmula resultado + atajo − dolor</h2>
+                <ol className="mr-h1list">
+                  {(cp.titulares || []).map((t, i) => (
+                    <li key={i} className={i === (cp.h1Index ?? 0) ? "star" : ""}>
+                      <span className="n">{i === (cp.h1Index ?? 0) ? "H1★" : `H${i + 1}`}</span>
+                      <span>{t.texto}{t.regla && <span className="r">Regla: {t.regla}</span>}</span>
+                    </li>
+                  ))}
+                </ol>
+                {cp.postura && <p style={{ marginTop: 14, fontSize: 13, color: "#334155" }}><b>Postura del batch:</b> {cp.postura}</p>}
+              </div>
+              <div className="mr-card">
+                <div className="mr-cardhead"><h2>Texto principal</h2>{cp.textoPrincipal && <CopyButton text={cp.textoPrincipal} />}</div>
+                {cp.textoPrincipal && <div className="mr-primary">{cp.textoPrincipal}</div>}
+                {cp.meta && (
+                  <div className="mr-fields">
+                    {[["Título (Meta)", cp.meta.titulo, 40], ["Descripción (Meta)", cp.meta.descripcion, 30], ["Botón CTA", cp.meta.cta, null]].map(([k, val, max]) => (
+                      <div className="mr-field" key={k}>
+                        <span className="k">{k}</span>
+                        <span>{val || "—"}</span>
+                        {max ? <span className={`cnt ${(val || "").length > max ? "over" : ""}`}>{(val || "").length}/{max}</span> : <span />}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {(cp.segmento || cp.patron || cp.imagePrompt) && (
+          <section className="mr-section">
+            <h2>Cómo se construyó el anuncio</h2>
+            <p className="sub">El anuncio ES la segmentación: a quién filtra, con qué esqueleto ganador y el prompt ensamblado (esqueleto × piel × filtro visual × copy) que generó la imagen.</p>
+            <div className="mr-grid" style={{ marginTop: 0 }}>
+              {cp.segmento && (
+                <div className="mr-card">
+                  <h2>Segmento: {cp.segmento.nombre}</h2>
+                  <dl className="mr-kv">
+                    <dt>Quién es</dt><dd>{cp.segmento.quienEs}</dd>
+                    <dt>Temperatura</dt><dd><span className={`mr-tag ${temp(cp.segmento.temperatura)}`}>{cp.segmento.temperatura}</span></dd>
+                    {cp.segmento.filtroCopy && (<><dt>Filtro de copy</dt><dd><i>{cp.segmento.filtroCopy.mecanismo}</i> — «{cp.segmento.filtroCopy.linea}»</dd></>)}
+                    {cp.segmento.filtroVisual && (<>
+                      <dt>Casting</dt><dd>{cp.segmento.filtroVisual.casting}</dd>
+                      <dt>Locación</dt><dd>{cp.segmento.filtroVisual.locacion}</dd>
+                      <dt>Props</dt><dd>{cp.segmento.filtroVisual.props}</dd>
+                      <dt>Marcador</dt><dd>{cp.segmento.filtroVisual.marcador}</dd>
+                    </>)}
+                  </dl>
+                  {cp.pcor && (
+                    <div style={{ marginTop: 14 }}>
+                      <h2>Radiografía PCOR</h2>
+                      <dl className="mr-kv">
+                        <dt>Problemas</dt><dd>{(cp.pcor.problemas || []).join(" · ")}</dd>
+                        <dt>Cuestionamientos</dt><dd>{(cp.pcor.cuestionamientos || []).join(" · ")}</dd>
+                        <dt>Obstáculos</dt><dd>{(cp.pcor.obstaculos || []).join(" · ")}</dd>
+                        <dt>Resultados</dt><dd>{(cp.pcor.resultados || []).join(" · ")}</dd>
+                      </dl>
+                    </div>
+                  )}
+                </div>
+              )}
+              <div style={{ display: "grid", gap: 20, alignContent: "start" }}>
+                {cp.patron && (
+                  <div className="mr-card">
+                    <h2>Patrón {cp.patron.id} · {cp.patron.nombre}{cp.patron.familia ? ` · ${cp.patron.familia}` : ""}</h2>
+                    <p style={{ fontSize: 13.5, color: "#334155", marginBottom: 10 }}>{cp.patron.porQue}</p>
+                    {cp.visual?.composicion?.length > 0 && <ol className="mr-zones">{cp.visual.composicion.map((z, i) => <li key={i}>{z}</li>)}</ol>}
+                  </div>
+                )}
+                {cp.imagePrompt && (
+                  <div className="mr-card">
+                    <div className="mr-cardhead"><h2>Prompt del anuncio (ensamblado)</h2><CopyButton text={cp.imagePrompt} /></div>
+                    <pre className="mr-prompt">{cp.imagePrompt}</pre>
+                  </div>
+                )}
+              </div>
             </div>
           </section>
         )}
