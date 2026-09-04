@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import Top from "../Top";
 import { logRead, storePing, hasRedis, K, zRevRange } from "@/lib/store";
 import { getSettings } from "@/lib/settings";
@@ -25,11 +26,19 @@ export default async function Diagnostico() {
     "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "SITE_URL", "APPS_SCRIPT_URL",
   ]);
 
+  // Dominio real donde se está sirviendo esta página (no el configurado): es el que Meta debe llamar.
+  const h = headers();
+  const realHost = h.get("x-forwarded-host") || h.get("host") || "";
+  const proto = realHost.startsWith("localhost") ? "http" : "https";
+  const realOrigin = realHost ? `${proto}://${realHost}` : "";
+  const configuredHost = (() => { try { return new URL(cfg.SITE_URL).host; } catch { return ""; } })();
+  const hostMatches = !!realHost && !!configuredHost && realHost === configuredHost;
+
   const lastVerify = hooks.find((h) => h.kind === "verify");
   const lastPost = hooks.find((h) => h.kind === "post");
   const lastMsg = hooks.find((h) => h.kind === "post" && h.messages > 0);
   const lastFail = hooks.find((h) => !h.ok);
-  const webhookUrl = `${(cfg.SITE_URL || "").replace(/\/$/, "")}/api/whatsapp/webhook`;
+  const webhookUrl = `${realOrigin}/api/whatsapp/webhook`;
 
   const checks = [
     {
@@ -78,9 +87,11 @@ export default async function Diagnostico() {
     },
     {
       label: "URL pública del sitio",
-      ok: /^https:\/\//.test(cfg.SITE_URL || ""),
-      detail: cfg.SITE_URL || "sin configurar",
-      fix: "Configuración → General. Debe ser el dominio real en https; de aquí salen los links y las imágenes que descarga WhatsApp.",
+      ok: hostMatches && /^https:\/\//.test(cfg.SITE_URL || ""),
+      detail: hostMatches
+        ? cfg.SITE_URL
+        : `Configurada: ${cfg.SITE_URL || "(vacía)"} · pero esta página se está sirviendo desde ${realOrigin}. No coinciden.`,
+      fix: `Configuración → General → URL pública del sitio: ponla en ${realOrigin}. Si no coincide, WhatsApp no puede descargar las imágenes y el pipeline no se puede llamar a sí mismo.`,
     },
   ];
 
@@ -105,6 +116,16 @@ export default async function Diagnostico() {
             <dt>Callback URL</dt><dd><code>{webhookUrl}</code></dd>
             <dt>Campo a suscribir</dt><dd><code>messages</code></dd>
           </div>
+          <p className="bo-muted" style={{ fontSize: 12.5, marginTop: 10 }}>
+            Esta es la dirección real desde la que se está sirviendo el back office. Pega exactamente eso en Meta →
+            Use cases → Connect with customers through WhatsApp → Configure Webhooks.
+            {!hostMatches && (
+              <b style={{ color: "#B45309", display: "block", marginTop: 6 }}>
+                ⚠️ Ojo: la «URL pública del sitio» de tu configuración ({cfg.SITE_URL || "vacía"}) apunta a otro lado.
+                Corrígela en Configuración → General o las imágenes y los links que reciba el lead van a fallar.
+              </b>
+            )}
+          </p>
         </div>
 
         {lastFail && (
