@@ -7,7 +7,7 @@ import "../result.css";
 
 const STEP_INFO = {
   brand: { title: "Analizando tu marca", desc: "Leo tu web y defino qué vendes, a quién y en qué industria compites." },
-  moodboard: { title: "Diseñando tu moodboard", desc: "Paleta, tipografía, fotografía y dirección de arte — y luego lo dibujo." },
+  moodboard: { title: "Definiendo la piel de tu marca", desc: "Paleta, tipografía, fotografía y dirección de arte — y luego la dibujo." },
   campaign: { title: "Definiendo el ángulo y el copy", desc: "Clasifico a tu cliente, elijo el ángulo ganador y escribo el Hook → Valor → Oferta." },
   ad: { title: "Renderizando tu anuncio", desc: "Genero el estático con la piel exacta de tu marca." },
 };
@@ -46,7 +46,7 @@ function LiveProgress({ r, marca }) {
                   <div className="mr-partial"><div className="lbl">Lo que entendí de tu marca</div>{r.brand.resumen}{r.brand.industria ? ` · ${r.brand.industria}` : ""}</div>
                 )}
                 {id === "moodboard" && r.moodboardImg && (
-                  <div className="mr-partial"><div className="lbl">Tu moodboard</div>
+                  <div className="mr-partial"><div className="lbl">La piel de tu marca</div>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={`/api/wa/image/${r.moodboardImg}`} alt="Moodboard" />
                   </div>
@@ -142,8 +142,8 @@ export default async function ResultPage({ params }) {
         <main className="wrap">
           <section className="mr-hero">
             <div className="mr-kicker">Metadology · avance en vivo</div>
-            <h1>{r.fields?.producto ? r.fields.producto.slice(0, 80) : "Tu moodboard y tu anuncio"}</h1>
-            <p>Estoy armando el moodboard de {marca === "tu marca" ? "tu marca" : marca} y el anuncio que deberías estar corriendo{r.fields?.pais ? ` en ${r.fields.pais}` : ""}.</p>
+            <h1>{r.fields?.producto ? r.fields.producto.slice(0, 80) : "Tu anuncio"}</h1>
+            <p>Estoy armando el anuncio que {marca === "tu marca" ? "tu marca" : marca} debería estar corriendo{r.fields?.pais ? ` en ${r.fields.pais}` : ""}, con su propia identidad visual.</p>
           </section>
           <LiveProgress r={r} marca={marca} />
           <div style={{ height: 60 }} />
