@@ -1,7 +1,72 @@
 import { notFound } from "next/navigation";
 import { kvGet, K } from "@/lib/store";
 import { getSetting } from "@/lib/settings";
+import { STAGES, resultState } from "@/lib/result";
+import LiveRefresh from "./LiveRefresh";
 import "../result.css";
+
+const STEP_INFO = {
+  brand: { title: "Analizando tu marca", desc: "Leo tu web y defino qué vendes, a quién y en qué industria compites." },
+  moodboard: { title: "Diseñando tu moodboard", desc: "Paleta, tipografía, fotografía y dirección de arte — y luego lo dibujo." },
+  campaign: { title: "Definiendo el ángulo y el copy", desc: "Clasifico a tu cliente, elijo el ángulo ganador y escribo el Hook → Valor → Oferta." },
+  ad: { title: "Renderizando tu anuncio", desc: "Genero el estático con la piel exacta de tu marca." },
+};
+
+function secs(a, b) {
+  if (!a || !b) return "";
+  const s = Math.round((b - a) / 1000);
+  return s >= 60 ? `${Math.floor(s / 60)} min ${s % 60} s` : `${s} s`;
+}
+
+function LiveProgress({ r, marca }) {
+  const state = resultState(r);
+  const p = r.progress || {};
+  const activeIdx = STAGES.findIndex((id) => p[id]?.startedAt && !p[id]?.doneAt);
+  const startedAt = r.createdAt || Date.now();
+  const cp = r.campaign?.copy;
+  return (
+    <section className="mr-live">
+      <div className="mr-live-head">
+        <h2>{state === "error" ? "Se atoró una etapa" : `Aria está trabajando en ${marca}`}</h2>
+        <span className="st">
+          {state === "generating" && <><span className="mr-pulse" /> en proceso · <LiveRefresh active startedAt={startedAt} /></>}
+        </span>
+      </div>
+      <div className="mr-steps">
+        {STAGES.map((id, i) => {
+          const st = p[id] || {};
+          const cls = st.error ? "error" : st.doneAt ? "done" : st.startedAt ? "active" : "pending";
+          return (
+            <div className={`mr-step ${cls}`} key={id}>
+              <div className="dot">{cls === "done" ? "✓" : cls === "error" ? "!" : i + 1}</div>
+              <div>
+                <div className="t">{STEP_INFO[id].title}{st.doneAt && <span className="time">{secs(st.startedAt, st.doneAt)}</span>}</div>
+                <div className="d">{cls === "active" ? "En curso…" : STEP_INFO[id].desc}</div>
+                {id === "brand" && st.doneAt && r.brand?.resumen && (
+                  <div className="mr-partial"><div className="lbl">Lo que entendí de tu marca</div>{r.brand.resumen}{r.brand.industria ? ` · ${r.brand.industria}` : ""}</div>
+                )}
+                {id === "moodboard" && r.moodboardImg && (
+                  <div className="mr-partial"><div className="lbl">Tu moodboard</div>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`/api/wa/image/${r.moodboardImg}`} alt="Moodboard" />
+                  </div>
+                )}
+                {id === "campaign" && st.doneAt && cp?.hook && (
+                  <div className="mr-partial"><div className="lbl">Ángulo ganador{r.campaign?.angulo?.lente ? `: ${r.campaign.angulo.lente}` : ""}</div>«{cp.hook}»</div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {state === "error" ? (
+        <div className="mr-live-error">Tuvimos un problema en esta etapa y el equipo de Caperifai ya lo está revisando. Si quieres, escribe <b>reintentar</b> en WhatsApp y lo vuelvo a intentar.</div>
+      ) : (
+        <div className="mr-live-note">Esta página se actualiza sola. También te voy avisando por WhatsApp en cada paso; el proceso completo toma unos 3 a 6 minutos.</div>
+      )}
+    </section>
+  );
+}
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +127,30 @@ export default async function ResultPage({ params }) {
   const mb = r.moodboard || {};
   const cp = r.campaign || {};
   const marca = r.brand?.marca || "tu marca";
-  const pending = !r.adImg;
+  const state = resultState(r);
+
+  if (state !== "done") {
+    return (
+      <div className="mr">
+        <header className="mr-top">
+          <div className="wrap">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt="Caperifai" />
+            <a className="cta" href={CTA} target="_blank" rel="noreferrer">Agenda con Caperifai</a>
+          </div>
+        </header>
+        <main className="wrap">
+          <section className="mr-hero">
+            <div className="mr-kicker">Metadology · avance en vivo</div>
+            <h1>{r.fields?.producto ? r.fields.producto.slice(0, 80) : "Tu moodboard y tu anuncio"}</h1>
+            <p>Estoy armando el moodboard de {marca === "tu marca" ? "tu marca" : marca} y el anuncio que deberías estar corriendo{r.fields?.pais ? ` en ${r.fields.pais}` : ""}.</p>
+          </section>
+          <LiveProgress r={r} marca={marca} />
+          <div style={{ height: 60 }} />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="mr">
@@ -79,11 +167,6 @@ export default async function ResultPage({ params }) {
           <div className="mr-kicker">Metadology · resultado</div>
           <h1>{marca}: tu moodboard y el anuncio que deberías estar corriendo</h1>
           <p>{r.brand?.resumen}{r.brand?.industria ? ` · ${r.brand.industria}` : ""}{r.fields?.pais ? ` · ${r.fields.pais}` : ""}</p>
-          {pending && (
-            <p style={{ marginTop: 12, color: "#B45309", fontWeight: 500 }}>
-              ⏳ Todavía estamos generando parte de tu resultado. Esta página se actualiza sola: recárgala en unos minutos.
-            </p>
-          )}
         </section>
 
         <div className="mr-grid">

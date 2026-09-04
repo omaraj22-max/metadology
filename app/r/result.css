@@ -68,3 +68,28 @@
 .mr-palette .sw b{display:block;margin-top:5px;font-weight:600}
 .mr-palette .sw span{color:var(--slate);display:block}
 .mr-palette .sw em{color:var(--slate);font-style:normal;font-size:11px;display:block;margin-top:2px}
+
+/* ---- avance en vivo ---- */
+.mr-live{margin-top:24px;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:26px 24px}
+.mr-live-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.mr-live-head h2{font-size:20px;margin:0}
+.mr-live-head .st{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--slate)}
+.mr-pulse{width:10px;height:10px;border-radius:50%;background:var(--violet);box-shadow:0 0 0 0 rgba(90,58,255,.5);animation:mrPulse 1.6s ease-out infinite}
+@keyframes mrPulse{0%{box-shadow:0 0 0 0 rgba(90,58,255,.45)}100%{box-shadow:0 0 0 12px rgba(90,58,255,0)}}
+.mr-elapsed{font-family:'Sora',sans-serif;font-variant-numeric:tabular-nums;font-weight:600;color:var(--ink)}
+.mr-steps{display:grid;gap:0}
+.mr-step{display:grid;grid-template-columns:28px 1fr;gap:14px;padding:12px 0;border-top:1px solid var(--line-2)}
+.mr-step:first-child{border-top:0}
+.mr-step .dot{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--slate);background:var(--paper)}
+.mr-step.done .dot{background:var(--grad);border-color:transparent;color:#fff}
+.mr-step.active .dot{border-color:var(--violet);color:var(--violet);animation:mrPulse 1.6s ease-out infinite}
+.mr-step.error .dot{border-color:#DC2626;color:#DC2626}
+.mr-step .t{font-family:'Sora',sans-serif;font-weight:600;font-size:15px}
+.mr-step .d{font-size:13px;color:var(--slate);margin-top:2px}
+.mr-step.pending .t{color:var(--slate);font-weight:500}
+.mr-step .time{font-size:11.5px;color:var(--slate);margin-left:8px;font-weight:400;font-family:'Inter',sans-serif}
+.mr-partial{margin-top:14px;padding:14px 16px;background:var(--paper-2);border:1px solid var(--line-2);border-radius:12px;font-size:14px}
+.mr-partial .lbl{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--violet);margin-bottom:6px}
+.mr-partial img{width:100%;max-width:420px;height:auto;border-radius:10px;border:1px solid var(--line);display:block;margin-top:8px}
+.mr-live-note{margin-top:18px;font-size:13px;color:var(--slate)}
+.mr-live-error{margin-top:18px;background:#FEF2F2;border:1px solid #FECACA;border-radius:12px;padding:14px 16px;font-size:14px;color:#991B1B}
