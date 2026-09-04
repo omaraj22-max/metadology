@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import Top from "../Top";
+import Simulator from "./Simulator";
 import { logRead, storePing, hasRedis, K, zRevRange } from "@/lib/store";
 import { getSettings } from "@/lib/settings";
 
@@ -127,6 +128,8 @@ export default async function Diagnostico() {
             )}
           </p>
         </div>
+
+        <Simulator />
 
         {lastFail && (
           <div className="bo-card" style={{ marginBottom: 20, borderColor: "#FCA5A5", background: "#FEF2F2" }}>
