@@ -7,7 +7,7 @@ export const maxDuration = 60;
 
 // Verificación del webhook (Meta → GET con hub.challenge)
 export async function GET(req) {
-  const challenge = verifyChallenge(new URL(req.url).searchParams);
+  const challenge = await verifyChallenge(new URL(req.url).searchParams);
   if (challenge === null) return new Response("Forbidden", { status: 403 });
   return new Response(challenge, { status: 200 });
 }
@@ -16,7 +16,7 @@ export async function GET(req) {
 // Meta reintenta si tardamos, y la respuesta de Aria puede tomar varios segundos.
 export async function POST(req) {
   const raw = await req.text();
-  if (!verifySignature(raw, req.headers.get("x-hub-signature-256"))) {
+  if (!(await verifySignature(raw, req.headers.get("x-hub-signature-256")))) {
     return new Response("Bad signature", { status: 401 });
   }
   let body = {};

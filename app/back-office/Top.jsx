@@ -1,4 +1,5 @@
 export default function Top({ current }) {
+  const items = [["list", "/back-office", "Conversaciones"], ["inbox", "/back-office/inbox", "Inbox"], ["settings", "/back-office/settings", "Configuración"]];
   return (
     <header className="bo-top">
       <div className="wrap">
@@ -8,7 +9,7 @@ export default function Top({ current }) {
           <span style={{ fontSize: 12, color: "#64748B", fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase" }}>Back office</span>
         </div>
         <nav>
-          <a href="/back-office" className={current === "list" ? "on" : ""}>Conversaciones</a>
+          {items.map(([id, href, label]) => <a key={id} href={href} className={current === id ? "on" : ""}>{label}</a>)}
           <a href="/" target="_blank" rel="noreferrer">Sitio</a>
         </nav>
       </div>

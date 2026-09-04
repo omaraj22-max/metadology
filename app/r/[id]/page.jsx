@@ -1,10 +1,9 @@
 import { notFound } from "next/navigation";
 import { kvGet, K } from "@/lib/store";
+import { getSetting } from "@/lib/settings";
 import "../result.css";
 
 export const dynamic = "force-dynamic";
-
-const CTA = process.env.CAPERIFAI_CTA_URL || "https://calendar.app.google/oqKtfT6Hkv4eET5u8";
 
 export async function generateMetadata({ params }) {
   const r = await kvGet(K.result(clean(params.id)));
@@ -59,6 +58,7 @@ function KV({ obj }) {
 export default async function ResultPage({ params }) {
   const r = await kvGet(K.result(clean(params.id)));
   if (!r) notFound();
+  const CTA = await getSetting("CAPERIFAI_CTA_URL");
   const mb = r.moodboard || {};
   const cp = r.campaign || {};
   const marca = r.brand?.marca || "tu marca";

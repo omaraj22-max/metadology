@@ -26,6 +26,7 @@ export default async function ConversationPage({ params }) {
             <p>Inicio {fmt(c.createdAt)} · última actividad {fmt(c.updatedAt)} · <span className={`bo-tag ${c.status}`}>{c.status}</span>{c.stage ? ` · etapa ${c.stage}` : ""}</p>
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <a className="bo-btn" href={`/back-office/inbox?c=${c.id}`} style={{ textDecoration: "none" }}>Abrir en el inbox</a>
             {c.resultId && <a className="bo-btn primary" href={`/r/${c.resultId}`} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>Ver página del resultado ↗</a>}
             {(c.status === "error" || c.status === "generating") && <RetryButton convId={c.id} label="Reintentar etapa" />}
             {(c.status === "done" || c.status === "error") && <RetryButton convId={c.id} fromStart label="Regenerar todo" />}
@@ -39,7 +40,7 @@ export default async function ConversationPage({ params }) {
             <h2>Conversación ({c.transcript?.length || 0} mensajes)</h2>
             <div className="bo-chat">
               {(c.transcript || []).map((m, i) => (
-                <div key={i} className={`bo-msg ${m.role}`}>{m.text}<small>{m.role === "user" ? "Usuario" : "Aria"} · {fmt(m.at)}</small></div>
+                <div key={i} className={`bo-msg ${m.role}`}>{m.text}<small>{m.role === "user" ? "Usuario" : m.role === "human" ? "Equipo" : "Aria"} · {fmt(m.at)}</small></div>
               ))}
             </div>
           </div>
@@ -62,7 +63,7 @@ export default async function ConversationPage({ params }) {
                   <dt>Resumen</dt><dd>{r.brand?.resumen || "—"}</dd>
                   <dt>Landing</dt><dd>{r.landing?.url ? `${r.landing.title || ""} (${r.landing.url})` : "no leída"}</dd>
                   <dt>Hook</dt><dd>{r.campaign?.copy?.hook || "—"}</dd>
-                  <dt>Modelo IA</dt><dd>{process.env.ANTHROPIC_MODEL || "claude-opus-5"}</dd>
+                  
                 </dl>
                 <div className="bo-imgs">
                   {/* eslint-disable-next-line @next/next/no-img-element */}

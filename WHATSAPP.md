@@ -13,11 +13,19 @@ por el mismo chat, más una página con el resultado completo. Todo vive en este
    se envía) → `campaign` (concepto/copy) → `ad` (imagen con el moodboard de referencia + entrega + link).
 4. Resultado en `/r/<id>`; imágenes en `/api/wa/image/<id>`.
 5. Cada conversación se espeja en el Google Sheet (pestaña **WhatsApp**, acción `wa_upsert` del Apps Script).
-6. Back office en `/back-office` (contraseña `BACKOFFICE_PASSWORD`): lista, detalle con transcripción, reintentar.
+6. Back office en `/back-office` (contraseña `BACKOFFICE_PASSWORD`):
+   - **Conversaciones**: lista + detalle con transcripción y reintento del pipeline.
+   - **Inbox**: chat en vivo con cada lead. Al escribir, la conversación pasa a modo *equipo* (Aria deja de contestar)
+     hasta que se le devuelve con el switch. Aviso si pasaron >24 h del último mensaje del lead (WhatsApp exige plantilla).
+   - **Configuración**: WhatsApp, IA (Claude/OpenAI), Sheet y general, guardados en Redis con botón *Probar* por servicio.
+     Aplican al instante; cada campo vacío cae a la variable de entorno de Vercel del mismo nombre.
 
 Palabras clave del usuario: `reintentar` (si falló), `reiniciar` (nueva marca).
 
 ## Variables de entorno (Vercel → Settings → Environment Variables)
+
+Solo **tres son obligatorias en Vercel** (bootstrap): `KV_REST_API_URL` + `KV_REST_API_TOKEN` (Upstash) y `BACKOFFICE_PASSWORD`.
+Todo lo demás se puede capturar desde `/back-office/settings` (o también en Vercel; la configuración guardada tiene prioridad).
 
 | Variable | Para qué |
 |---|---|
