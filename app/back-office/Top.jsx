@@ -1,5 +1,5 @@
 export default function Top({ current }) {
-  const items = [["list", "/back-office", "Conversaciones"], ["inbox", "/back-office/inbox", "Inbox"], ["settings", "/back-office/settings", "Configuración"]];
+  const items = [["list", "/back-office", "Conversaciones"], ["inbox", "/back-office/inbox", "Inbox"], ["settings", "/back-office/settings", "Configuración"], ["diag", "/back-office/diagnostico", "Diagnóstico"]];
   return (
     <header className="bo-top">
       <div className="wrap">
