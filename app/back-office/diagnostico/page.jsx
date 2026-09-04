@@ -37,6 +37,32 @@ export default async function Diagnostico() {
   const configuredHost = (() => { try { return new URL(cfg.SITE_URL).host; } catch { return ""; } })();
   const hostMatches = !!realHost && !!configuredHost && realHost === configuredHost;
 
+  // Prueba real: ¿la URL pública configurada llega a ESTE sistema? (De ella dependen las imágenes que
+  // descarga WhatsApp y la llamada entre etapas del pipeline.) Puede ser otro alias del mismo proyecto.
+  let site = { ok: false, detail: "" };
+  if (!/^https?:\/\//.test(cfg.SITE_URL || "")) {
+    site.detail = "sin configurar o sin https";
+  } else if (!cfg.META_WEBHOOK_VERIFY_TOKEN) {
+    site = { ok: hostMatches, detail: hostMatches ? cfg.SITE_URL : "no se puede comprobar sin verify token" };
+  } else {
+    const nonce = `diag-${Math.random().toString(36).slice(2, 10)}`;
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 8000);
+      const r = await fetch(
+        `${cfg.SITE_URL.replace(/\/$/, "")}/api/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=${encodeURIComponent(cfg.META_WEBHOOK_VERIFY_TOKEN)}&hub.challenge=${nonce}`,
+        { headers: { "x-wa-selfcheck": "1" }, cache: "no-store", signal: ctrl.signal }
+      );
+      clearTimeout(t);
+      const body = (await r.text()).trim();
+      site = r.ok && body === nonce
+        ? { ok: true, detail: `${cfg.SITE_URL} responde a este mismo sistema ✓` }
+        : { ok: false, detail: `${cfg.SITE_URL} respondió HTTP ${r.status} (${body.slice(0, 40) || "vacío"}): no es este sistema o no tiene el mismo verify token.` };
+    } catch (e) {
+      site = { ok: false, detail: `${cfg.SITE_URL} no respondió (${e?.name === "AbortError" ? "timeout" : e?.message || e}).` };
+    }
+  }
+
   // La WABA debe estar suscrita a esta app o Meta no entrega los mensajes, aunque el webhook esté verificado.
   let subs = null;
   try {
@@ -49,7 +75,7 @@ export default async function Diagnostico() {
   const lastPost = hooks.find((h) => h.kind === "post");
   const lastMsg = hooks.find((h) => h.kind === "post" && h.messages > 0);
   const lastFail = hooks.find((h) => !h.ok);
-  const webhookUrl = `${realOrigin}/api/whatsapp/webhook`;
+  const webhookUrl = `${site.ok ? cfg.SITE_URL.replace(/\/$/, "") : realOrigin}/api/whatsapp/webhook`;
 
   const checks = [
     {
@@ -109,11 +135,9 @@ export default async function Diagnostico() {
     },
     {
       label: "URL pública del sitio",
-      ok: hostMatches && /^https:\/\//.test(cfg.SITE_URL || ""),
-      detail: hostMatches
-        ? cfg.SITE_URL
-        : `Configurada: ${cfg.SITE_URL || "(vacía)"} · pero esta página se está sirviendo desde ${realOrigin}. No coinciden.`,
-      fix: `Configuración → General → URL pública del sitio: ponla en ${realOrigin}. Si no coincide, WhatsApp no puede descargar las imágenes y el pipeline no se puede llamar a sí mismo.`,
+      ok: site.ok,
+      detail: site.detail + (site.ok && !hostMatches ? ` · (estás viendo el back office en ${realHost}, que es otro alias del mismo proyecto)` : ""),
+      fix: `Configuración → General → URL pública del sitio: debe ser un dominio de ESTE proyecto (por ejemplo ${realOrigin}). Si no, WhatsApp no puede descargar las imágenes y el pipeline no se puede llamar a sí mismo.`,
     },
   ];
 
@@ -139,12 +163,16 @@ export default async function Diagnostico() {
             <dt>Campo a suscribir</dt><dd><code>messages</code></dd>
           </div>
           <p className="bo-muted" style={{ fontSize: 12.5, marginTop: 10 }}>
-            Esta es la dirección real desde la que se está sirviendo el back office. Pega exactamente eso en Meta →
-            Use cases → Connect with customers through WhatsApp → Configure Webhooks.
-            {!hostMatches && (
+            Pega exactamente eso en Meta → Use cases → Connect with customers through WhatsApp → Configure Webhooks.
+            {site.ok && !hostMatches && (
+              <span style={{ display: "block", marginTop: 6 }}>
+                Sale de tu «URL pública del sitio». Estás viendo el back office en <code>{realHost}</code>, que también apunta a este proyecto; las dos direcciones funcionan.
+              </span>
+            )}
+            {!site.ok && (
               <b style={{ color: "#B45309", display: "block", marginTop: 6 }}>
-                ⚠️ Ojo: la «URL pública del sitio» de tu configuración ({cfg.SITE_URL || "vacía"}) apunta a otro lado.
-                Corrígela en Configuración → General o las imágenes y los links que reciba el lead van a fallar.
+                ⚠️ La «URL pública del sitio» de tu configuración ({cfg.SITE_URL || "vacía"}) no responde a este sistema, así que
+                aquí se muestra la dirección real de esta página. Corrígela en Configuración → General o las imágenes y los links que reciba el lead van a fallar.
               </b>
             )}
           </p>

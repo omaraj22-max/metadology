@@ -23,7 +23,10 @@ export async function GET(req) {
     await log({ kind: "verify", ok: false, detail: `token recibido: ${params.get("hub.verify_token") || "(ninguno)"}` });
     return new Response("Forbidden", { status: 403 });
   }
-  await log({ kind: "verify", ok: true, detail: "Meta verificó la URL correctamente" });
+  // La autocomprobación del diagnóstico no cuenta como verificación de Meta.
+  if (!req.headers.get("x-wa-selfcheck")) {
+    await log({ kind: "verify", ok: true, detail: "Meta verificó la URL correctamente" });
+  }
   return new Response(challenge, { status: 200 });
 }
 
