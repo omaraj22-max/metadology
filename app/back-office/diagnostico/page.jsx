@@ -1,8 +1,10 @@
 import { headers } from "next/headers";
 import Top from "../Top";
 import Simulator from "./Simulator";
+import Subscribe from "./Subscribe";
 import { logRead, storePing, hasRedis, K, zRevRange } from "@/lib/store";
 import { getSettings } from "@/lib/settings";
+import { listSubscribedApps } from "@/lib/wa";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +36,14 @@ export default async function Diagnostico() {
   const realOrigin = realHost ? `${proto}://${realHost}` : "";
   const configuredHost = (() => { try { return new URL(cfg.SITE_URL).host; } catch { return ""; } })();
   const hostMatches = !!realHost && !!configuredHost && realHost === configuredHost;
+
+  // La WABA debe estar suscrita a esta app o Meta no entrega los mensajes, aunque el webhook esté verificado.
+  let subs = null;
+  try {
+    subs = await listSubscribedApps();
+  } catch (e) {
+    subs = { error: String(e?.message || e) };
+  }
 
   const lastVerify = hooks.find((h) => h.kind === "verify");
   const lastPost = hooks.find((h) => h.kind === "post");
@@ -67,6 +77,17 @@ export default async function Diagnostico() {
       fix: lastPost
         ? "Llegan avisos pero no mensajes: revisa que estés escribiendo al número correcto y que en Webhook → Manage el campo suscrito sea «messages»."
         : "Casi siempre son dos cosas: (1) la app sigue en modo Development — publícala (Development → Live); (2) la Callback URL no apunta a este dominio o falta suscribir «messages» en Webhook → Manage.",
+    },
+    {
+      label: "La cuenta de WhatsApp está suscrita a esta app",
+      ok: !!subs?.apps?.length,
+      detail: subs?.error
+        ? `No se pudo consultar: ${subs.error}`
+        : subs?.apps?.length
+          ? `WABA ${subs.wabaId} · apps suscritas: ${subs.apps.join(", ")}`
+          : `WABA ${subs?.wabaId || "?"} · ninguna app suscrita. Este es el motivo más común de que el webhook esté verificado y aun así no llegue ningún mensaje.`,
+      fix: "Usa el botón «Suscribir la cuenta a esta app» de aquí abajo.",
+      action: !subs?.apps?.length,
     },
     {
       label: "Credenciales de WhatsApp",
@@ -147,6 +168,7 @@ export default async function Diagnostico() {
                 <b>{c.label}</b>
                 <div className="bo-muted" style={{ fontSize: 13 }}>{c.detail}</div>
                 {!c.ok && <div style={{ fontSize: 12.5, color: "#B45309", marginTop: 3 }}>→ {c.fix}</div>}
+                {c.action && <div style={{ marginTop: 8 }}><Subscribe /></div>}
               </div>
             </div>
           ))}
