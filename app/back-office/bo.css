@@ -73,9 +73,10 @@
 @media(max-width:700px){.bo-field{grid-template-columns:1fr}}
 
 /* ---- inbox ---- */
-.bo-inbox{display:grid;grid-template-columns:340px 1fr;gap:0;border:1px solid var(--line);border-radius:14px;background:var(--paper);overflow:hidden;height:calc(100vh - 150px);min-height:520px;margin-bottom:30px}
-@media(max-width:860px){.bo-inbox{grid-template-columns:1fr;height:auto}.bo-inbox.has-open .bo-inbox-list{display:none}}
-.bo-inbox-list{border-right:1px solid var(--line);overflow:auto;display:flex;flex-direction:column}
+.bo-inbox{display:grid;grid-template-columns:340px 1fr;grid-template-rows:minmax(0,1fr);gap:0;border:1px solid var(--line);border-radius:14px;background:var(--paper);overflow:hidden;height:calc(100vh - 150px);min-height:520px;margin-bottom:30px}
+@media(max-width:860px){.bo-inbox{grid-template-columns:1fr;height:auto}.bo-inbox.has-open .bo-inbox-list{display:none}.bo-chat-body{max-height:60vh}}
+/* min-height:0 en los hijos del grid/flex: sin esto crecen con el contenido y nunca aparece el scroll */
+.bo-inbox-list{border-right:1px solid var(--line);overflow:auto;display:flex;flex-direction:column;min-height:0}
 .bo-inbox-list .head{padding:12px 14px;border-bottom:1px solid var(--line);font-size:12px;color:var(--slate);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--paper)}
 .bo-conv{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:11px 14px;border-bottom:1px solid #EEF2F7;cursor:pointer;text-align:left;background:none;border-left:3px solid transparent;font-family:inherit;color:var(--ink)}
 .bo-conv:hover{background:#FBFCFE}
@@ -86,11 +87,11 @@
 .bo-conv .p b{font-weight:600;color:var(--ink)}
 .bo-conv .tags{grid-column:1/3;display:flex;gap:6px;margin-top:3px;align-items:center}
 .bo-unread{background:var(--violet);color:#fff;border-radius:999px;font-size:10.5px;font-weight:700;padding:1px 7px}
-.bo-chat-pane{display:flex;flex-direction:column;min-width:0}
+.bo-chat-pane{display:flex;flex-direction:column;min-width:0;min-height:0}
 .bo-chat-head{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 .bo-chat-head h2{font-size:15px;margin:0;font-family:'Sora',sans-serif}
 .bo-chat-head .sub{font-size:12px;color:var(--slate)}
-.bo-chat-body{flex:1;overflow:auto;padding:16px;background:#F8FAFC;display:flex;flex-direction:column;gap:8px}
+.bo-chat-body{flex:1;min-height:0;overflow-y:auto;padding:16px;background:#F8FAFC;display:flex;flex-direction:column;gap:8px}
 .bo-msg.human{background:#DCFCE7;justify-self:end;align-self:flex-end;border-bottom-right-radius:4px}
 .bo-chat-body .bo-msg.user{align-self:flex-start;background:#fff;border:1px solid var(--line)}
 .bo-chat-body .bo-msg.aria{align-self:flex-end;background:#EEF2FF}
