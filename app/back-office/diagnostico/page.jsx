@@ -4,7 +4,7 @@ import Simulator from "./Simulator";
 import Subscribe from "./Subscribe";
 import { logRead, storePing, hasRedis, K, zRevRange } from "@/lib/store";
 import { getSettings } from "@/lib/settings";
-import { listSubscribedApps, testAppSecret } from "@/lib/wa";
+import { listSubscribedApps, testAppSecret, getAppSubscriptions, listPhoneNumbers } from "@/lib/wa";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +79,22 @@ export default async function Diagnostico() {
     secret = { configured: true, ok: null, detail: String(e?.message || e) };
   }
 
+  // Lo que Meta tiene guardado de verdad: a qué URL entrega y qué campos manda.
+  let subsApp = null;
+  try {
+    subsApp = await getAppSubscriptions();
+  } catch (e) {
+    subsApp = { error: String(e?.message || e) };
+  }
+
+  // Números de la cuenta y su estado (un número sin registrar no recibe mensajes).
+  let phones = null;
+  try {
+    phones = await listPhoneNumbers();
+  } catch (e) {
+    phones = { error: String(e?.message || e) };
+  }
+
   const lastVerify = hooks.find((h) => h.kind === "verify");
   const lastPost = hooks.find((h) => h.kind === "post");
   const lastMsg = hooks.find((h) => h.kind === "post" && h.messages > 0);
@@ -122,6 +138,26 @@ export default async function Diagnostico() {
           : `WABA ${subs?.wabaId || "?"} · ninguna app suscrita. Este es el motivo más común de que el webhook esté verificado y aun así no llegue ningún mensaje.`,
       fix: "Usa el botón «Suscribir la cuenta a esta app» de aquí abajo.",
       action: !subs?.apps?.length,
+    },
+    {
+      label: "Meta entrega el campo «messages» a esta URL",
+      ok: !!(subsApp?.found && subsApp.active && subsApp.fields?.includes("messages") && realHost && (subsApp.callbackUrl || "").includes(realHost)),
+      detail: subsApp?.error
+        ? `No se pudo consultar: ${subsApp.error}`
+        : !subsApp?.found
+          ? "La app no tiene ninguna suscripción de whatsapp_business_account."
+          : `URL guardada en Meta: ${subsApp.callbackUrl || "(ninguna)"} · ${subsApp.active ? "activa" : "INACTIVA"} · campos: ${subsApp.fields.join(", ") || "(ninguno)"}${subsApp.fields.includes("messages") ? "" : " ← falta «messages»"}${realHost && subsApp.callbackUrl && !subsApp.callbackUrl.includes(realHost) ? " ← la URL apunta a otro sitio" : ""}`,
+      fix: "Meta → tu app → Use cases → Connect with customers through WhatsApp → Configure Webhooks: revisa que la Callback URL sea la de arriba y que en «Manage» el campo «messages» esté suscrito.",
+    },
+    {
+      label: "Números de la cuenta de WhatsApp",
+      ok: !!phones?.numbers?.length && phones.numbers.some((n) => n.id === cfg.META_PHONE_NUMBER_ID),
+      detail: phones?.error
+        ? `No se pudo consultar: ${phones.error}`
+        : phones?.numbers?.length
+          ? phones.numbers.map((n) => `${n.display_phone_number || n.id} «${n.verified_name || "sin nombre"}» — ${n.code_verification_status || "?"}${n.quality_rating ? `, calidad ${n.quality_rating}` : ""}${n.id === cfg.META_PHONE_NUMBER_ID ? "  ← el configurado aquí" : ""}`).join(" · ")
+          : "La cuenta no reporta números.",
+      fix: "El Phone number ID configurado debe ser uno de estos. Si registraste un número nuevo, copia SU id (Meta → WhatsApp → API Setup) en Configuración → WhatsApp, y escribe a ese número al probar.",
     },
     {
       label: "El App Secret corresponde a la app",
