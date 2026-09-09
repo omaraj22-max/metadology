@@ -4,7 +4,7 @@ import Simulator from "./Simulator";
 import Subscribe from "./Subscribe";
 import { logRead, storePing, hasRedis, K, zRevRange } from "@/lib/store";
 import { getSettings } from "@/lib/settings";
-import { listSubscribedApps } from "@/lib/wa";
+import { listSubscribedApps, testAppSecret } from "@/lib/wa";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +71,14 @@ export default async function Diagnostico() {
     subs = { error: String(e?.message || e) };
   }
 
+  // El App Secret mal copiado descarta TODOS los mensajes con 401 y sin rastro visible en Meta.
+  let secret = { configured: false, ok: null, detail: "" };
+  try {
+    secret = await testAppSecret();
+  } catch (e) {
+    secret = { configured: true, ok: null, detail: String(e?.message || e) };
+  }
+
   const lastVerify = hooks.find((h) => h.kind === "verify");
   const lastPost = hooks.find((h) => h.kind === "post");
   const lastMsg = hooks.find((h) => h.kind === "post" && h.messages > 0);
@@ -114,6 +122,12 @@ export default async function Diagnostico() {
           : `WABA ${subs?.wabaId || "?"} · ninguna app suscrita. Este es el motivo más común de que el webhook esté verificado y aun así no llegue ningún mensaje.`,
       fix: "Usa el botón «Suscribir la cuenta a esta app» de aquí abajo.",
       action: !subs?.apps?.length,
+    },
+    {
+      label: "El App Secret corresponde a la app",
+      ok: secret.ok !== false,
+      detail: secret.detail,
+      fix: "Configuración → WhatsApp → App secret: cópialo de developers.facebook.com → tu app → Configuración de la app → Básica → «Clave secreta de la app» (NO el «Identificador del cliente» ni el «Token del cliente»). Si prefieres, bórralo: sin App Secret el sistema funciona, solo deja de validar la firma.",
     },
     {
       label: "Credenciales de WhatsApp",
