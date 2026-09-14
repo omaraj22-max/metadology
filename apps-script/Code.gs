@@ -9,11 +9,19 @@
  *   { "action": "check", "correo": "x@y.com" }   -> { ok:true, used:true|false }        (formulario web)
  *   { "action": "lead",  ...campos del form }     -> { ok:true, used:false }              (formulario web)
  *   { "action": "wa_upsert", ...conversación }    -> { ok:true, row:N }                   (WhatsApp: una fila por conversación, se actualiza)
+ *   { "action": "referral", ...campos del form }  -> { ok:true, row:N }                   (landing /referrals, pestaña "Referidos")
  */
 
 // ===== Formulario web (pestaña "Leads") =====
 const SHEET_NAME = "Leads";
 const HEADERS = ["fecha", "nombre", "correo", "telefono", "empresa", "producto", "link", "problema"];
+
+// ===== Landing de referidos /referrals (pestaña "Referidos") =====
+const REF_SHEET = "Referidos";
+const REF_HEADERS = [
+  "fecha", "nombre", "correo", "empresa", "rol", "etapa",
+  "presupuesto", "canales", "problema", "referido", "origen",
+];
 
 // ===== WhatsApp (pestaña "WhatsApp") =====
 const WA_SHEET = "WhatsApp";
@@ -39,6 +47,18 @@ function getWaSheet() {
     sh.appendRow(WA_HEADERS);
     sh.setFrozenRows(1);
     sh.getRange(1, 1, 1, WA_HEADERS.length).setFontWeight("bold");
+  }
+  return sh;
+}
+
+function getRefSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName(REF_SHEET);
+  if (!sh) sh = ss.insertSheet(REF_SHEET);
+  if (sh.getLastRow() === 0) {
+    sh.appendRow(REF_HEADERS);
+    sh.setFrozenRows(1);
+    sh.getRange(1, 1, 1, REF_HEADERS.length).setFontWeight("bold");
   }
   return sh;
 }
@@ -93,6 +113,18 @@ function waUpsert(body) {
   }
 }
 
+// Un alta por envío del formulario de /referrals. Sin dedup: el mismo correo puede
+// volver con otro partner o en otra etapa, y perder ese contacto sería peor que repetirlo.
+function referralAppend(body) {
+  const sh = getRefSheet();
+  const row = REF_HEADERS.map(function (h) {
+    if (h === "fecha") return body.fecha || new Date().toISOString();
+    return body[h] || "";
+  });
+  sh.appendRow(row);
+  return { ok: true, row: sh.getLastRow() };
+}
+
 function doPost(e) {
   try {
     const body = JSON.parse((e && e.postData && e.postData.contents) || "{}");
@@ -100,6 +132,9 @@ function doPost(e) {
 
     if (action === "wa_upsert") {
       return jsonOut(waUpsert(body));
+    }
+    if (action === "referral") {
+      return jsonOut(referralAppend(body));
     }
 
     const sh = getSheet();
@@ -123,5 +158,5 @@ function doPost(e) {
 }
 
 function doGet() {
-  return jsonOut({ ok: true, service: "caperifai-leads", whatsapp: true });
+  return jsonOut({ ok: true, service: "caperifai-leads", whatsapp: true, referrals: true });
 }
