@@ -7,21 +7,39 @@ import "./referrals.css";
 // rediseño de sep-2026). Los props replican los del diseño: referredMode, partner,
 // pricePiloto, priceLista, offerCondition. En /referrals se llenan desde el query string.
 
-/** Isotipo de Caperifai: flecha cian sobre cuadro violeta. Viene del propio diseño. */
+// Logo real de Caperifai (public/logo.png, 2672x449). `logo-mark.png` es solo el
+// isotipo recortado y `logo-white.png` el lockup con el wordmark en blanco, porque
+// el azul marino original desaparece sobre el footer oscuro.
+const LOCKUP_RATIO = 2672 / 449;
+
+/** Lockup horizontal completo. */
+function Logo({ height = 28, white = false }) {
+  return (
+    /* eslint-disable-next-line @next/next/no-img-element */
+    <img
+      className="ref-logo-lockup"
+      src={white ? "/logo-white.png" : "/logo.png"}
+      alt="Caperifai"
+      width={Math.round(height * LOCKUP_RATIO)}
+      height={height}
+      style={{ height, width: "auto" }}
+    />
+  );
+}
+
+/** Solo el isotipo — se usa como avatar de Aria. */
 function Mark({ size = 28 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" className="ref-mark" aria-hidden="true">
-      <rect width="32" height="32" rx="9" fill="#5A3AFF" />
-      <path d="M10.5 21.5 L21.5 10.5" stroke="#00D4FF" strokeWidth="3" strokeLinecap="round" />
-      <path
-        d="M14.5 10.5 H21.5 V17.5"
-        stroke="#00D4FF"
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-    </svg>
+    /* eslint-disable-next-line @next/next/no-img-element */
+    <img
+      className="ref-mark"
+      src="/logo-mark.png"
+      alt=""
+      aria-hidden="true"
+      width={size}
+      height={size}
+      style={{ width: size, height: size }}
+    />
   );
 }
 
@@ -274,12 +292,9 @@ export default function ReferralsView({
       {/* NAV */}
       <nav className="ref-nav">
         <div className="ref-nav-in">
-          <div className="ref-brand">
-            <Mark size={28} />
-            <span className="ref-wordmark">
-              caperif<i>ai</i>
-            </span>
-          </div>
+          <a className="ref-brand" href="#" aria-label="Caperifai">
+            <Logo height={30} />
+          </a>
           <div className="ref-nav-links">
             <a href="#como-funciona">Cómo funciona</a>
             <a href="#agentes">Agentes</a>
@@ -335,10 +350,7 @@ export default function ReferralsView({
             <div className="ref-shot">
               <div className="ref-shot-side">
                 <div className="ref-shot-brand">
-                  <Mark size={20} />
-                  <span>
-                    caperif<i style={{ fontStyle: "normal", color: "#5A3AFF" }}>ai</i>
-                  </span>
+                  <Logo height={18} />
                 </div>
                 <div className="ref-shot-nav">
                   <span className="is-on">Overview</span>
@@ -984,10 +996,7 @@ export default function ReferralsView({
       <footer className="ref-footer">
         <div className="ref-footer-in">
           <div className="ref-footer-brand">
-            <Mark size={26} />
-            <span className="ref-footer-name">
-              caperif<i>ai</i>
-            </span>
+            <Logo height={28} white />
           </div>
           <div className="ref-footer-links">
             <a href="#precio">Planes</a>

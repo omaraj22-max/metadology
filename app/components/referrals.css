@@ -112,16 +112,9 @@
   align-items: center;
   gap: 30px;
 }
-.ref-brand { display: flex; align-items: center; gap: 9px; margin-right: auto; }
-.ref-mark { flex: 0 0 auto; display: block; }
-.ref-wordmark {
-  font-family: Sora, sans-serif;
-  font-weight: 600;
-  font-size: 21px;
-  letter-spacing: -0.03em;
-  color: var(--ink);
-}
-.ref-wordmark i { font-style: normal; color: var(--violet); }
+.ref-brand { display: flex; align-items: center; margin-right: auto; }
+.ref-mark { flex: 0 0 auto; display: block; object-fit: contain; }
+.ref-logo-lockup { flex: 0 0 auto; display: block; width: auto; object-fit: contain; }
 .ref-nav-links { display: flex; align-items: center; gap: 28px; font-size: 14.5px; font-weight: 500; }
 .ref-nav-links a { color: var(--body); }
 .ref-nav-links a:hover { color: var(--violet); }
@@ -215,8 +208,7 @@
   align-content: start;
   min-width: 0;
 }
-.ref-shot-brand { display: flex; align-items: center; gap: 8px; }
-.ref-shot-brand span { font-family: Sora, sans-serif; font-weight: 600; font-size: 14px; letter-spacing: -0.03em; }
+.ref-shot-brand { display: flex; align-items: center; }
 .ref-shot-nav { display: grid; gap: 7px; font-size: 12.5px; color: var(--body); }
 .ref-shot-nav span { padding: 8px 10px; }
 .ref-shot-nav .is-on { border-radius: 9px; background: #f0edff; color: var(--violet); font-weight: 600; }
@@ -741,9 +733,7 @@
   justify-content: space-between;
   font-size: 13.5px;
 }
-.ref-footer-brand { display: flex; align-items: center; gap: 9px; }
-.ref-footer-name { font-family: Sora, sans-serif; font-weight: 600; color: #fff; font-size: 18px; letter-spacing: -0.03em; }
-.ref-footer-name i { font-style: normal; color: #8fa6ff; }
+.ref-footer-brand { display: flex; align-items: center; }
 .ref-footer-links { display: flex; flex-wrap: wrap; gap: 22px; }
 .ref .ref-footer a { color: #8a98b8; }
 .ref .ref-footer a:hover { color: #fff; }
@@ -773,6 +763,6 @@
 
 @media (max-width: 520px) {
   .ref-nav-in { gap: 12px; padding: 14px 18px; }
-  .ref-wordmark { font-size: 18px; }
+  .ref-nav .ref-logo-lockup { height: 24px !important; }
   .ref-btn--nav { padding: 10px 16px; font-size: 13px; white-space: nowrap; }
 }
