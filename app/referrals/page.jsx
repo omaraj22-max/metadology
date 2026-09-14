@@ -1,12 +1,21 @@
 import ReferralsView from "../components/referrals-view";
+import { findPartner } from "@/lib/partners";
 
-// Landing de referidos para startups. Los valores que en Claude Design eran props
-// editables se llenan desde el query string, para que cada partner reciba su link:
+// Landing de referidos para startups.
 //
-//   /referrals?ref=Nombre%20del%20Partner&precio=$X%20MXN&lista=$Y%20MXN&condicion=Solo%205%20cupos
-//   /referrals?referido=0     -> modo genérico "Caperifai for Startups" (sin partner)
+// El link de cada partner lleva su código en ?ref= (también acepta el slug o el
+// nombre). Ese código resuelve el nombre que se muestra en el hero y en la oferta,
+// y queda precargado en el campo "Código de referido" del formulario:
 //
-// Sin parámetros la página muestra los placeholders del diseño ([PARTNER], [PRECIO PILOTO]…).
+//   /referrals?ref=CAPDITX0926     -> Distrito Tlalpan
+//   /referrals?ref=CAPAGVX0926     -> Angel Ventures
+//
+// Un ?ref= que no es de ningún partner conocido no inventa un nombre: cae a la
+// variante genérica "Caperifai for Startups", pero conserva el código en el form
+// para no perder el rastro. Para un partner de una sola vez se puede forzar el
+// nombre con ?partner=Nombre. Con ?referido=0 se fuerza la variante genérica.
+//
+// Precio y condición son editables por link: ?precio=… &lista=… &condicion=…
 
 export const metadata = {
   title: "Caperifai for Startups · El equipo de growth que todavía no puedes contratar",
@@ -19,19 +28,23 @@ export const metadata = {
 const first = (v) => (Array.isArray(v) ? v[0] : v);
 
 export default function ReferralsPage({ searchParams = {} }) {
-  const partner = (first(searchParams.ref) || first(searchParams.partner) || "").trim();
+  const ref = (first(searchParams.ref) || "").trim();
+  const known = findPartner(ref);
+  const partnerName = (first(searchParams.partner) || "").trim() || known?.name || "";
+  const partnerCode = known?.code || ref;
+
   const referidoParam = first(searchParams.referido);
-  const referredMode = referidoParam === "0" || referidoParam === "false" ? false : true;
+  const forcedOff = referidoParam === "0" || referidoParam === "false";
+  const referredMode = !forcedOff && Boolean(partnerName);
 
   return (
     <ReferralsView
-      partner={partner || "[PARTNER]"}
+      partner={partnerName || "[PARTNER]"}
+      partnerCode={partnerCode}
       referredMode={referredMode}
-      pricePiloto={first(searchParams.precio) || "[PRECIO PILOTO]"}
-      priceLista={first(searchParams.lista) || "[PRECIO LISTA]"}
-      offerCondition={
-        first(searchParams.condicion) || "[CONDICIÓN: cupos / vigencia / etapa máxima]"
-      }
+      pricePiloto={first(searchParams.precio) || "Precio preferencial"}
+      priceLista={first(searchParams.lista) || ""}
+      offerCondition={first(searchParams.condicion) || "3 meses de precio especial"}
       demoUrl={process.env.NEXT_PUBLIC_DEMO_URL || ""}
     />
   );

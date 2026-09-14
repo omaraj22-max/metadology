@@ -131,24 +131,6 @@ const DAYS = [
   },
 ];
 
-const QUOTES = [
-  {
-    q: "“Lanzamos campañas muchísimo más rápido y optimizamos mejor la inversión de nuestros clientes. Es como escalar la operación sin necesidad de agrandar el equipo.”",
-    name: "Francisco Leitao",
-    role: "CEO, Portuñol Agency",
-  },
-  {
-    q: "“Usar Caperifai se siente como multiplicar el equipo sin aumentar la nómina. Nos dio una capacidad operativa que simplemente no teníamos.”",
-    name: "Carlos Franco",
-    role: "CEO, Fyware",
-  },
-  {
-    q: "“Lo que antes nos tomaba días, con Caperifai sucede en minutos.”",
-    name: "Francisco López",
-    role: "Marketing Director, Inc MTY",
-  },
-];
-
 const FAQ = [
   {
     q: "¿Sirve si mi presupuesto de pauta todavía es chico?",
@@ -187,20 +169,31 @@ const FAQ = [
 
 const CANALES = ["Meta", "Google", "TikTok", "LinkedIn", "Aún no invierto"];
 
+// Mismos logos que el home de caperif.ai ("Creado por el equipo de:"). Los SVG
+// ya vienen en gris (#646464), no hace falta filtro.
+const LOGOS = [
+  { src: "/logos-equipo/spotify.svg", alt: "Spotify", w: 397, h: 119 },
+  { src: "/logos-equipo/amazon.svg", alt: "Amazon", w: 375, h: 113 },
+  { src: "/logos-equipo/yaydoo.svg", alt: "Yaydoo", w: 447, h: 109 },
+  { src: "/logos-equipo/huawei.svg", alt: "Huawei", w: 375, h: 83 },
+  { src: "/logos-equipo/xepelin.svg", alt: "Xepelin", w: 473, h: 112 },
+];
+
 export default function ReferralsView({
   partner = "[PARTNER]",
   referredMode = true,
-  pricePiloto = "[PRECIO PILOTO]",
-  priceLista = "[PRECIO LISTA]",
-  offerCondition = "[CONDICIÓN: cupos / vigencia / etapa máxima]",
+  partnerCode = "",
+  pricePiloto = "Precio preferencial",
+  priceLista = "",
+  offerCondition = "3 meses de precio especial",
   demoUrl = "",
 }) {
   const eyebrow = referredMode
     ? `${partner} te recomendó Caperifai. Tu acceso de 30 días ya está activo.`
     : "Caperifai for Startups";
   const offerHeadline = referredMode
-    ? `Precio de startup, porque ${partner} te mandó`
-    : "Precio de startup, sin contrato de agencia";
+    ? `30 días gratis porque ${partner} te mandó`
+    : "30 días gratis, sin contrato de agencia";
 
   const [state, setState] = useState("idle"); // idle | sending | done
   const [error, setError] = useState("");
@@ -315,9 +308,18 @@ export default function ReferralsView({
             <div className="ref-logos">
               <div className="ref-logos-label">Creado por el equipo detrás de</div>
               <div className="ref-logos-row">
-                <div className="ref-ph ref-ph--logo">logo 01</div>
-                <div className="ref-ph ref-ph--logo">logo 02</div>
-                <div className="ref-ph ref-ph--logo">logo 03</div>
+                {LOGOS.map((l) => (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    key={l.alt}
+                    className="ref-logo"
+                    src={l.src}
+                    alt={l.alt}
+                    width={l.w}
+                    height={l.h}
+                    loading="lazy"
+                  />
+                ))}
               </div>
             </div>
           </div>
@@ -355,13 +357,6 @@ export default function ReferralsView({
                   </div>
                 </div>
               </div>
-            </div>
-            <div className="ref-ph ref-ph--shot">
-              <span>
-                screenshot del Marketing Overview
-                <br />
-                (spend · pipeline · ROAS)
-              </span>
             </div>
           </div>
         </div>
@@ -585,7 +580,7 @@ export default function ReferralsView({
                 ))}
                 <tr className="is-us">
                   <td className="is-name">Caperifai</td>
-                  <td className="is-price">{pricePiloto}</td>
+                  <td className="is-price">1 Suscripción</td>
                   <td>15 min para conectar · 30 días para ver</td>
                   <td>Agentes + tu aprobación</td>
                   <td>Plataforma, data y modelo entrenado con tu negocio</td>
@@ -610,60 +605,6 @@ export default function ReferralsView({
                 <p>{d.p}</p>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* PRUEBA */}
-      <section className="ref-proof">
-        <div className="ref-wrap">
-          <h2 className="ref-h2">Equipos que ya operan así</h2>
-          <div className="ref-grid ref-grid--280">
-            {QUOTES.map((q) => (
-              <figure className="ref-quote" key={q.name}>
-                <blockquote>{q.q}</blockquote>
-                <figcaption>
-                  <strong>{q.name}</strong>
-                  <br />
-                  {q.role}
-                </figcaption>
-              </figure>
-            ))}
-            <figure className="ref-quote ref-quote--ph">
-              <figcaption>
-                [TESTIMONIAL STARTUP]
-                <br />
-                founder seed / Serie A —
-                <br />
-                pieza de mayor impacto en esta página
-              </figcaption>
-            </figure>
-          </div>
-          <div className="ref-metrics">
-            <div className="ref-metric">
-              <div className="ref-metric-n" style={{ color: "#5A3AFF" }}>
-                [X]
-              </div>
-              <div className="ref-metric-l">horas ahorradas</div>
-            </div>
-            <div className="ref-metric">
-              <div className="ref-metric-n" style={{ color: "#2563EB" }}>
-                $[X]M
-              </div>
-              <div className="ref-metric-l">de pauta administrada</div>
-            </div>
-            <div className="ref-metric">
-              <div className="ref-metric-n" style={{ color: "#0F172A" }}>
-                [X]
-              </div>
-              <div className="ref-metric-l">campañas lanzadas</div>
-            </div>
-            <div className="ref-metric">
-              <div className="ref-metric-n" style={{ color: "#0090B0" }}>
-                [X]
-              </div>
-              <div className="ref-metric-l">equipos en piloto automático</div>
-            </div>
           </div>
         </div>
       </section>
@@ -698,7 +639,7 @@ export default function ReferralsView({
                 </li>
               </ul>
               <div className="ref-price">
-                <span className="ref-price-old">{priceLista}</span>
+                {priceLista ? <span className="ref-price-old">{priceLista}</span> : null}
                 <span className="ref-price-now">{pricePiloto}</span>
               </div>
               <p className="ref-price-cond">{offerCondition}</p>
@@ -855,7 +796,7 @@ export default function ReferralsView({
                     <input
                       type="text"
                       name="referido"
-                      defaultValue={partner}
+                      defaultValue={partnerCode}
                       disabled={state === "sending"}
                     />
                   </label>
