@@ -228,6 +228,33 @@ const FAQ = [
 
 const CANALES = ["Meta", "Google", "TikTok", "LinkedIn", "Aún no invierto"];
 
+/**
+ * CTA intermedio. El label cambia en cada sección a propósito: un mismo botón
+ * repetido nueve veces se lee como plantilla y se deja de ver.
+ */
+function SectionCta({ label, note, demo, demoUrl }) {
+  const demoProps = demoUrl ? { target: "_blank", rel: "noopener noreferrer" } : {};
+  return (
+    <div className="ref-midcta">
+      {note ? <p className="ref-midcta-note">{note}</p> : null}
+      <div className="ref-midcta-row">
+        <a href="#form" className="ref-btn ref-btn--primary ref-btn--hero2">
+          {label}
+        </a>
+        {demo ? (
+          <a
+            href={demoUrl || "#form"}
+            className="ref-btn ref-btn--outline ref-btn--hero2"
+            {...demoProps}
+          >
+            {demo}
+          </a>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export default function ReferralsView({
   partner = "[PARTNER]",
   partnerCode = "",
@@ -442,6 +469,10 @@ export default function ReferralsView({
             Las campañas siguieron gastando. Nadie las pausó. Nadie las escaló. Y el lunes, el
             reporte se arma a mano en un Sheet que ya nadie cree.
           </p>
+          <SectionCta
+            note="El martes a las 4 de la tarde ya es hoy."
+            label="Activar mis 30 días gratis"
+          />
         </div>
       </section>
 
@@ -502,6 +533,10 @@ export default function ReferralsView({
               </div>
             ))}
           </div>
+          <SectionCta
+            note="No hay que creerle: se conecta y se ve."
+            label="Conectar mis cuentas"
+          />
         </div>
       </section>
 
@@ -619,6 +654,7 @@ export default function ReferralsView({
               </div>
             </div>
           </div>
+          <SectionCta note="Los tres pasos toman 15 minutos." label="Empezar por el paso 01" />
         </div>
       </section>
 
@@ -664,6 +700,7 @@ export default function ReferralsView({
               ))}
             </div>
           </div>
+          <SectionCta note="Los cuatro agentes vienen incluidos." label="Poner al equipo a trabajar" />
         </div>
       </section>
 
@@ -691,6 +728,7 @@ export default function ReferralsView({
           <p className="ref-control-note">
             El paso de uno a otro lo decides tú, cuando quieras, campaña por campaña.
           </p>
+          <SectionCta note="El 100% de las cuentas arranca en Copilot." label="Empezar en modo Copilot" />
         </div>
       </section>
 
@@ -712,6 +750,7 @@ export default function ReferralsView({
               </div>
             ))}
           </div>
+          <SectionCta note="Todo esto corre desde el día uno." label="Quiero que empiece hoy" />
         </div>
       </section>
 
@@ -754,6 +793,7 @@ export default function ReferralsView({
               </tbody>
             </table>
           </div>
+          <SectionCta note="La cuarta fila no pide contrato ni nómina." label="Tomar la cuarta salida" />
         </div>
       </section>
 
@@ -772,6 +812,7 @@ export default function ReferralsView({
               </div>
             ))}
           </div>
+          <SectionCta note="Sin tarjeta. Cancelas cuando quieras." label="Arrancar mi prueba de 30 días" />
         </div>
       </section>
 
@@ -837,6 +878,12 @@ export default function ReferralsView({
               </details>
             ))}
           </div>
+          <SectionCta
+            note="¿Te quedó una duda que no está aquí?"
+            label="Empezar gratis 30 días"
+            demo="Agendar demo de 15 min"
+            demoUrl={demoUrl}
+          />
         </div>
       </section>
 

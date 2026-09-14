@@ -573,6 +573,21 @@
   color: var(--body);
 }
 
+/* ---------- CTA intermedio de sección ---------- */
+.ref-midcta {
+  margin-top: clamp(40px, 5vw, 56px);
+  padding-top: clamp(28px, 3vw, 36px);
+  border-top: 1px solid var(--line);
+  text-align: center;
+}
+.ref-midcta-note {
+  margin: 0 0 16px;
+  font-size: 15.5px;
+  line-height: 1.6;
+  color: var(--body);
+}
+.ref-midcta-row { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+
 /* ---------- FAQ ---------- */
 .ref-faq h2 { margin-bottom: 36px; }
 .ref-faq-list { display: grid; gap: 12px; }
