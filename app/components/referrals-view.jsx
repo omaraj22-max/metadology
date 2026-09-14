@@ -282,29 +282,6 @@ export default function ReferralsView({
               Sin tarjeta. Conectas tus cuentas en 15 minutos. Si no te sirve, te vas y tu data se va
               contigo.
             </p>
-            <div className="ref-stats">
-              <div className="ref-stat">
-                <div className="ref-stat-n" style={{ color: "#5A3AFF" }}>
-                  +40%<sup>*</sup>
-                </div>
-                <div className="ref-stat-l">en conversiones</div>
-              </div>
-              <div className="ref-stat">
-                <div className="ref-stat-n" style={{ color: "#2563EB" }}>
-                  −65%<sup>*</sup>
-                </div>
-                <div className="ref-stat-l">de presupuesto desperdiciado</div>
-              </div>
-              <div className="ref-stat">
-                <div className="ref-stat-n" style={{ color: "#0F172A" }}>
-                  +30%<sup>*</sup>
-                </div>
-                <div className="ref-stat-l">de ROAS</div>
-              </div>
-            </div>
-            <p className="ref-footnote">
-              *Basado en referencias de la industria. Los resultados pueden variar.
-            </p>
             <div className="ref-logos">
               <div className="ref-logos-label">Creado por el equipo detrás de</div>
               <div className="ref-logos-row">
@@ -358,6 +335,29 @@ export default function ReferralsView({
                 </div>
               </div>
             </div>
+            <div className="ref-statsbar">
+              <div className="ref-statsbar-cell">
+                <div className="ref-statsbar-n" style={{ color: "#5A3AFF" }}>
+                  +40%<sup>*</sup>
+                </div>
+                <div className="ref-statsbar-l">en conversiones</div>
+              </div>
+              <div className="ref-statsbar-cell">
+                <div className="ref-statsbar-n" style={{ color: "#2563EB" }}>
+                  −65%<sup>*</sup>
+                </div>
+                <div className="ref-statsbar-l">de presupuesto desperdiciado</div>
+              </div>
+              <div className="ref-statsbar-cell">
+                <div className="ref-statsbar-n" style={{ color: "#0F172A" }}>
+                  +30%<sup>*</sup>
+                </div>
+                <div className="ref-statsbar-l">de ROAS</div>
+              </div>
+            </div>
+            <p className="ref-footnote">
+              *Basado en referencias de la industria. Los resultados pueden variar.
+            </p>
           </div>
         </div>
       </header>

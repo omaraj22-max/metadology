@@ -157,9 +157,14 @@
   margin: 0 auto;
   padding: clamp(56px, 7vw, 104px) 24px clamp(48px, 5vw, 72px);
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  /* Rejilla explícita, no auto-fit: la columna de texto necesita más ancho que la
+     de Aria para que el H1 quepa en dos líneas en todo el rango de dos columnas. */
+  grid-template-columns: minmax(0, 1fr);
   gap: clamp(32px, 5vw, 64px);
   align-items: center;
+}
+@media (min-width: 940px) {
+  .ref-hero-in { grid-template-columns: minmax(0, 1.22fr) minmax(0, 0.78fr); }
 }
 .ref-hero-col { min-width: 0; }
 .ref-badge {
@@ -185,8 +190,8 @@
 }
 .ref-h1 {
   font-weight: 700;
-  font-size: clamp(38px, 5.2vw, 62px);
-  line-height: 1.03;
+  font-size: clamp(31px, 3.6vw, 44px);
+  line-height: 1.06;
   letter-spacing: -0.035em;
   margin: 0 0 22px;
   text-wrap: balance;
@@ -202,22 +207,27 @@
 .ref-cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
 .ref-reassure { font-size: 13.5px; line-height: 1.6; color: var(--muted); margin: 0 0 32px; }
 
-.ref-stats {
+.ref-statsbar {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 12px;
-  margin-bottom: 14px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px -18px rgba(15, 23, 42, 0.22);
 }
-.ref-stat { padding: 16px 18px; border-radius: 14px; background: #fff; border: 1px solid var(--line); }
-.ref-stat-n {
+.ref-statsbar-cell { background: #fff; padding: 18px 16px; }
+.ref-statsbar-n {
   font-family: Sora, sans-serif;
   font-weight: 700;
-  font-size: 26px;
+  font-size: clamp(22px, 2vw, 28px);
   letter-spacing: -0.03em;
+  line-height: 1.1;
 }
-.ref-stat-n sup { font-size: 15px; color: var(--muted); vertical-align: baseline; }
-.ref-stat-l { font-size: 13px; color: var(--body); margin-top: 2px; }
-.ref-footnote { font-size: 11.5px; color: var(--muted); margin: 0 0 28px; }
+.ref-statsbar-n sup { font-size: 0.55em; color: var(--muted); vertical-align: baseline; }
+.ref-statsbar-l { font-size: 12.5px; line-height: 1.4; color: var(--body); margin-top: 4px; }
+.ref-footnote { font-size: 11.5px; color: var(--muted); margin: 0; }
 
 .ref-logos { border-top: 1px solid var(--line); padding-top: 20px; }
 .ref-logos-label {
