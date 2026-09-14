@@ -3,33 +3,84 @@
 import React, { useState } from "react";
 import "./referrals.css";
 
-// Landing de referidos. Importada de Claude Design ("Caperifai Startups Landing.dc.html").
-// Los props replican los del diseño: referredMode, partner, pricePiloto, priceLista,
-// offerCondition. En la ruta /referrals se llenan desde el query string.
+// Landing de referidos. Importada de Claude Design ("Caperifai Startups Landing.dc.html",
+// rediseño de sep-2026). Los props replican los del diseño: referredMode, partner,
+// pricePiloto, priceLista, offerCondition. En /referrals se llenan desde el query string.
+
+/** Isotipo de Caperifai: flecha cian sobre cuadro violeta. Viene del propio diseño. */
+function Mark({ size = 28 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" className="ref-mark" aria-hidden="true">
+      <rect width="32" height="32" rx="9" fill="#5A3AFF" />
+      <path d="M10.5 21.5 L21.5 10.5" stroke="#00D4FF" strokeWidth="3" strokeLinecap="round" />
+      <path
+        d="M14.5 10.5 H21.5 V17.5"
+        stroke="#00D4FF"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </svg>
+  );
+}
+
+// Mismos logos que el home de caperif.ai ("Creado por el equipo de:").
+const LOGOS = [
+  { src: "/logos-equipo/spotify.svg", alt: "Spotify", w: 397, h: 119 },
+  { src: "/logos-equipo/amazon.svg", alt: "Amazon", w: 375, h: 113 },
+  { src: "/logos-equipo/yaydoo.svg", alt: "Yaydoo", w: 447, h: 109 },
+  { src: "/logos-equipo/huawei.svg", alt: "Huawei", w: 375, h: 83 },
+  { src: "/logos-equipo/xepelin.svg", alt: "Xepelin", w: 473, h: 112 },
+];
+
+const KPIS = [
+  { l: "Total Spend", n: "$2.45M", d: "↑ 12.5% vs últimos 30 días" },
+  { l: "Total Pipeline", n: "$18.6M", d: "↑ 28.3% vs últimos 30 días" },
+  { l: "ROAS", n: "4.32x", d: "↑ 18.7% vs últimos 30 días" },
+];
+
+const BARS = [
+  { h: "38%", c: "#DDD7FF" },
+  { h: "52%", c: "#DDD7FF" },
+  { h: "44%", c: "#DDD7FF" },
+  { h: "66%", c: "#C4B8FF" },
+  { h: "58%", c: "#C4B8FF" },
+  { h: "78%", c: "#8C74FF" },
+  { h: "70%", c: "#8C74FF" },
+  { h: "92%", c: "#5A3AFF" },
+  { h: "84%", c: "#5A3AFF" },
+];
+
+const TOP_CAMPAIGNS = [
+  ["US | Google Search | Brand", "$4.2M", "4.8x"],
+  ["US | Meta | Prospecting", "$3.8M", "4.1x"],
+  ["US | LinkedIn | Retargeting", "$2.9M", "3.9x"],
+];
 
 const PAINS = [
   {
-    n: "01",
+    n: "Pain 01",
     t: "Cada plataforma te cuenta una historia distinta.",
     p: "Meta se cuelga 40 conversiones, Google se cuelga 35, y tu CRM registró 18 leads reales. ¿Cuál es la verdad? Nadie en la empresa lo sabe con certeza.",
   },
   {
-    n: "02",
+    n: "Pain 02",
     t: "El presupuesto se sigue gastando aunque nadie esté viendo.",
     p: "Un anuncio con fatiga, una audiencia mal excluida, un conjunto que se comió el 70% del gasto. Cada día sin revisar es runway que se quema sin aviso.",
   },
   {
-    n: "03",
+    n: "Pain 03",
     t: "Tu única persona de marketing se volvió operadora.",
     p: "Contrataste a alguien para pensar en crecimiento. Hoy pasa 15 horas a la semana exportando CSVs y armando reportes.",
   },
   {
-    n: "04",
+    n: "Pain 04",
     t: "El consejo pregunta CAC y payback, y tú contestas con impresiones.",
     p: "No porque no sepas: porque la data para contestar bien está partida en seis herramientas.",
   },
   {
-    n: "05",
+    n: "Pain 05",
     t: "Cotizaste una agencia y era más cara que un ingeniero.",
     p: "Retainer, fee sobre pauta, 12 meses de contrato — y cuando te vas, la data y el aprendizaje se quedan con ellos.",
   },
@@ -38,7 +89,7 @@ const PAINS = [
 const NOT_CARDS = [
   { t: "No es un dashboard más", p: "Los dashboards te muestran el problema. Caperifai lo corrige." },
   {
-    t: "No es un generador de copy con IA",
+    t: "No es un generador de copy",
     p: "Escribir anuncios es el 10% del trabajo. El otro 90% es decidir dónde va cada peso.",
   },
   {
@@ -51,25 +102,24 @@ const NOT_CARDS = [
   },
 ];
 
-const STEPS = [
-  {
-    n: "01",
-    t: "Conecta tu ecosistema",
-    p: "Integras canales, audiencias, CRM y sitio en una sola fuente de verdad. Se sincroniza en tiempo real, con atribución unificada, para que dejes de operar a ciegas por canal.",
-    note: "Toma 15 minutos y no necesitas a un dev.",
-  },
-  {
-    n: "02",
-    t: "Interpreta lo que sí importa",
-    p: "Analiza patrones, desempeño y señales de intención para separar lo que genera crecimiento de lo que solo genera fricción: efectividad real de anuncios, atribución directa y eficiencia de gasto.",
-    note: "El resultado: sabes qué campaña te trae clientes y cuál te trae ruido.",
-  },
-  {
-    n: "03",
-    t: "Activa decisiones",
-    p: "Convierte esa inteligencia en acciones priorizadas: rebalancear presupuesto, ajustar pujas, pausar lo que quema, escalar lo que rinde, rotar creativos antes de la fatiga.",
-    note: "Tú autorizas con un clic — o dejas que se ejecuten solas bajo tus reglas.",
-  },
+const CONNECT_CHIPS = [
+  "Sync en tiempo real",
+  "Sin datos aislados",
+  "Audiencias unificadas",
+  "Attribution Hub",
+  "Conexión segura",
+];
+
+const METERS = [
+  { l: "Efectividad de anuncios", v: "78%", c: "#5A3AFF" },
+  { l: "Atribución directa", v: "64%", c: "#2563EB" },
+  { l: "Eficiencia de gasto", v: "91%", c: "#0F172A" },
+];
+
+const ARIA_ACTIONS = [
+  { t: "Escalar presupuesto", d: "Reasignar +20% a alto ROAS." },
+  { t: "Pausar anuncio", d: "Evitar ad waste activo." },
+  { t: "Rotar creativos", d: "Prevenir fatiga publicitaria." },
 ];
 
 const SIDE_AGENTS = [
@@ -106,26 +156,21 @@ const COMPARE = [
 const DAYS = [
   {
     label: "Días 1–2",
-    color: "#5A3AFF",
     t: "Conexión",
     p: "Conectas tus cuentas de anuncios, CRM y sitio. Caperifai ingiere tu historial completo de campañas.",
   },
   {
     label: "Días 3–7",
-    color: "#4A55F5",
     t: "Diagnóstico",
     p: "Recibes la primera lectura real: dónde se está yendo el presupuesto, qué campañas sí atribuyen ingreso y qué está roto en tu medición.",
   },
   {
     label: "Semanas 2–3",
-    color: "#2563EB",
     t: "Copilot",
     p: "Aria empieza a proponerte acciones concretas todos los días. Tú apruebas las que quieras y ves el efecto.",
   },
   {
     label: "Semana 4",
-    color: "#0090B0",
-    borderColor: "#00A8CC",
     t: "Decisión",
     p: "Comparas contra tu línea base. Si te está haciendo ganar, pasas al piloto. Si no, cancelas y te llevas tu data.",
   },
@@ -144,11 +189,7 @@ const FAQ = [
     q: "¿Qué pasa con mi agencia actual?",
     a: "Muchos equipos las conservan y usan Caperifai como capa de control: por primera vez pueden auditar con números qué está haciendo la agencia y exigir sobre datos, no sobre reportes.",
   },
-  {
-    q: "¿Qué plataformas conecta?",
-    a: "[PLATAFORMAS — llenar antes de publicar]",
-    placeholder: true,
-  },
+  { q: "¿Qué plataformas conecta?", a: "[PLATAFORMAS — llenar antes de publicar]", placeholder: true },
   {
     q: "¿Cuánto tarda en ser útil?",
     a: "El diagnóstico llega en la primera semana. Las recomendaciones fuertes salen cuando ya digirió tu historial — por eso el piloto es de tres meses y no de tres semanas.",
@@ -169,27 +210,17 @@ const FAQ = [
 
 const CANALES = ["Meta", "Google", "TikTok", "LinkedIn", "Aún no invierto"];
 
-// Mismos logos que el home de caperif.ai ("Creado por el equipo de:"). Los SVG
-// ya vienen en gris (#646464), no hace falta filtro.
-const LOGOS = [
-  { src: "/logos-equipo/spotify.svg", alt: "Spotify", w: 397, h: 119 },
-  { src: "/logos-equipo/amazon.svg", alt: "Amazon", w: 375, h: 113 },
-  { src: "/logos-equipo/yaydoo.svg", alt: "Yaydoo", w: 447, h: 109 },
-  { src: "/logos-equipo/huawei.svg", alt: "Huawei", w: 375, h: 83 },
-  { src: "/logos-equipo/xepelin.svg", alt: "Xepelin", w: 473, h: 112 },
-];
-
 export default function ReferralsView({
   partner = "[PARTNER]",
-  referredMode = true,
   partnerCode = "",
+  referredMode = true,
   pricePiloto = "Precio preferencial",
   priceLista = "",
   offerCondition = "3 meses de precio especial",
   demoUrl = "",
 }) {
   const eyebrow = referredMode
-    ? `${partner} te recomendó Caperifai. Tu acceso de 30 días ya está activo.`
+    ? `${partner} te recomendó Caperifai · acceso de 30 días activo`
     : "Caperifai for Startups";
   const offerHeadline = referredMode
     ? `30 días gratis porque ${partner} te mandó`
@@ -236,22 +267,26 @@ export default function ReferralsView({
     }
   }
 
+  const demoProps = demoUrl ? { target: "_blank", rel: "noopener noreferrer" } : {};
+
   return (
     <div className="ref">
       {/* NAV */}
       <nav className="ref-nav">
         <div className="ref-nav-in">
           <div className="ref-brand">
-            <div className="ref-brand-mark" />
-            <span className="ref-brand-name">Caperifai</span>
+            <Mark size={28} />
+            <span className="ref-wordmark">
+              caperif<i>ai</i>
+            </span>
           </div>
           <div className="ref-nav-links">
             <a href="#como-funciona">Cómo funciona</a>
-            <a href="#agentes">Los agentes</a>
-            <a href="#precio">Precio para startups</a>
+            <a href="#agentes">Agentes</a>
+            <a href="#precio">Planes</a>
           </div>
           <a href="#form" className="ref-btn ref-btn--primary ref-btn--nav">
-            Empezar gratis 30 días
+            Empezar ahora
           </a>
         </div>
       </nav>
@@ -259,112 +294,132 @@ export default function ReferralsView({
       {/* HERO */}
       <header className="ref-hero">
         <div className="ref-hero-in">
-          <div className="ref-hero-col">
-            <div className="ref-badge">
-              <span className="ref-badge-dot" />
-              <span>{eyebrow}</span>
+          <div className="ref-badge">
+            <span />
+            <span>{eyebrow}</span>
+          </div>
+          <h1 className="ref-h1">El equipo de growth que todavía no puedes contratar</h1>
+          <p className="ref-hero-lede">
+            Caperifai conecta tus canales, tu CRM y tu web en un solo cerebro, entiende qué está
+            moviendo tu crecimiento y ejecuta los cambios en tus campañas todos los días. Tú
+            apruebas. Él opera. Sin nómina nueva, sin retainer de 12 meses.
+          </p>
+          <div className="ref-cta-row">
+            <a href="#form" className="ref-btn ref-btn--primary ref-btn--hero">
+              Empezar gratis 30 días
+            </a>
+            <a href="#como-funciona" className="ref-btn ref-btn--outline ref-btn--hero2">
+              Cómo funciona
+            </a>
+          </div>
+          <p className="ref-reassure">
+            Sin tarjeta. Conectas tus cuentas en 15 minutos. Si no te sirve, te vas y tu data se va
+            contigo.
+          </p>
+          <div className="ref-statpills">
+            <div className="ref-statpill">
+              <b style={{ color: "#5A3AFF" }}>+40%*</b> en conversiones
             </div>
-            <h1 className="ref-h1">El equipo de growth que todavía no puedes contratar.</h1>
-            <p className="ref-lede">
-              Caperifai conecta tus canales, tu CRM y tu web en un solo cerebro, entiende qué está
-              moviendo tu crecimiento y ejecuta los cambios en tus campañas todos los días. Tú
-              apruebas. Él opera. Sin nómina nueva, sin retainer de 12 meses.
-            </p>
-            <div className="ref-cta-row">
-              <a href="#form" className="ref-btn ref-btn--primary ref-btn--lg ref-btn--hero">
-                Empezar gratis 30 días
-              </a>
-              <a href="#como-funciona" className="ref-btn ref-btn--ghost">
-                Ver cómo funciona (4 min)
-              </a>
+            <div className="ref-statpill">
+              <b style={{ color: "#2563EB" }}>−65%*</b> de presupuesto desperdiciado
             </div>
-            <p className="ref-reassure">
-              Sin tarjeta. Conectas tus cuentas en 15 minutos. Si no te sirve, te vas y tu data se va
-              contigo.
-            </p>
-            <div className="ref-logos">
-              <div className="ref-logos-label">Creado por el equipo detrás de</div>
-              <div className="ref-logos-row">
-                {LOGOS.map((l) => (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    key={l.alt}
-                    className="ref-logo"
-                    src={l.src}
-                    alt={l.alt}
-                    width={l.w}
-                    height={l.h}
-                    loading="lazy"
-                  />
-                ))}
+            <div className="ref-statpill">
+              <b style={{ color: "#0F172A" }}>+30%*</b> de ROAS
+            </div>
+          </div>
+        </div>
+
+        {/* PRODUCT SHOT */}
+        <div className="ref-shot-out">
+          <div className="ref-shot-frame">
+            <div className="ref-shot">
+              <div className="ref-shot-side">
+                <div className="ref-shot-brand">
+                  <Mark size={20} />
+                  <span>
+                    caperif<i style={{ fontStyle: "normal", color: "#5A3AFF" }}>ai</i>
+                  </span>
+                </div>
+                <div className="ref-shot-nav">
+                  <span className="is-on">Overview</span>
+                  <span>Campañas</span>
+                  <span>Canales</span>
+                  <span>Atribución</span>
+                  <span>Automatización</span>
+                  <span>Reportes</span>
+                </div>
+              </div>
+              <div className="ref-shot-main">
+                <div className="ref-shot-head">
+                  <span>Marketing Overview</span>
+                  <span className="ref-shot-range">Últimos 30 días</span>
+                </div>
+                <div className="ref-kpis">
+                  {KPIS.map((k) => (
+                    <div className="ref-kpi" key={k.l}>
+                      <div className="ref-kpi-l">{k.l}</div>
+                      <div className="ref-kpi-n">{k.n}</div>
+                      <div className="ref-kpi-d">{k.d}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="ref-chartbox">
+                  <div className="ref-chart-head">
+                    <span>Pipeline over time</span>
+                    <span>$18.6M</span>
+                  </div>
+                  <div className="ref-bars">
+                    {BARS.map((b, i) => (
+                      <div key={i}>
+                        <i style={{ height: b.h, background: b.c }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="ref-toptable">
+                  <div className="ref-toprow ref-toprow--head">
+                    <span>Top campañas</span>
+                    <span>Spend</span>
+                    <span>ROAS</span>
+                  </div>
+                  {TOP_CAMPAIGNS.map(([n, s, r]) => (
+                    <div className="ref-toprow" key={n}>
+                      <span>{n}</span>
+                      <span>{s}</span>
+                      <span>{r}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Hero visual: mock de Aria */}
-          <div className="ref-hero-visual">
-            <div className="ref-card-aria">
-              <div className="ref-card-aria-head">
-                <div className="ref-card-aria-mark" />
-                <span className="ref-card-aria-name">Aria</span>
-                <span className="ref-card-aria-role">· AI Copilot</span>
-                <span className="ref-pill-copilot">Copilot</span>
-              </div>
-              <div className="ref-card-aria-body">
-                <p>
-                  Hola, Mateo. Detectamos una oportunidad para transferir el{" "}
-                  <strong>15% del presupuesto</strong> a los anuncios con mejor conversión.
-                </p>
-                <div className="ref-aria-actions">
-                  <span className="ref-aria-btn ref-aria-btn--solid">Autorizar</span>
-                  <span className="ref-aria-btn ref-aria-btn--outline">Revisar</span>
-                </div>
-                <div className="ref-aria-list">
-                  <div className="ref-aria-item">
-                    <span className="ref-dot" style={{ background: "#5A3AFF" }} />
-                    Subir presupuesto en Google Search Brand 20%
-                  </div>
-                  <div className="ref-aria-item">
-                    <span className="ref-dot" style={{ background: "#2563EB" }} />
-                    Pausar ad sets con fatiga en Meta Prospecting
-                  </div>
-                  <div className="ref-aria-item">
-                    <span className="ref-dot" style={{ background: "#00D4FF" }} />
-                    Expandir audiencia de LinkedIn Retargeting
-                  </div>
-                </div>
-              </div>
+          <div className="ref-logos">
+            <div className="ref-logos-label">Creado por el equipo de:</div>
+            <div className="ref-logos-row">
+              {LOGOS.map((l) => (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  key={l.alt}
+                  className="ref-logo"
+                  src={l.src}
+                  alt={l.alt}
+                  width={l.w}
+                  height={l.h}
+                  loading="lazy"
+                />
+              ))}
             </div>
-            <div className="ref-statsbar">
-              <div className="ref-statsbar-cell">
-                <div className="ref-statsbar-n" style={{ color: "#5A3AFF" }}>
-                  +40%<sup>*</sup>
-                </div>
-                <div className="ref-statsbar-l">en conversiones</div>
-              </div>
-              <div className="ref-statsbar-cell">
-                <div className="ref-statsbar-n" style={{ color: "#2563EB" }}>
-                  −65%<sup>*</sup>
-                </div>
-                <div className="ref-statsbar-l">de presupuesto desperdiciado</div>
-              </div>
-              <div className="ref-statsbar-cell">
-                <div className="ref-statsbar-n" style={{ color: "#0F172A" }}>
-                  +30%<sup>*</sup>
-                </div>
-                <div className="ref-statsbar-l">de ROAS</div>
-              </div>
-            </div>
-            <p className="ref-footnote">
-              *Basado en referencias de la industria. Los resultados pueden variar.
-            </p>
           </div>
+          <p className="ref-footnote">
+            *Basado en referencias de la industria. Los resultados pueden variar.
+          </p>
         </div>
       </header>
 
-      {/* SHOCKING STATEMENT */}
-      <section className="ref-dark ref-statement">
-        <div className="ref-wrap ref-wrap--sm">
+      {/* STATEMENT */}
+      <section className="ref-statement">
+        <div className="ref-wrap ref-wrap--1000">
           <h2>
             En una startup, el marketing no falla por falta de estrategia. Falla por falta de quien
             lo opere el martes a las 4 de la tarde.
@@ -378,13 +433,14 @@ export default function ReferralsView({
         </div>
       </section>
 
-      {/* AGITACIÓN */}
-      <section className="ref-agit">
+      {/* PROBLEMA */}
+      <section className="ref-sec--surface" style={{ borderBottom: "1px solid #E2E8F0" }}>
         <div className="ref-wrap">
-          <div className="ref-eyebrow">Si algo de esto te suena, estás en el lugar correcto</div>
-          <h2 className="ref-h2 ref-h2--tight">
-            Cinco cosas que pasan en toda startup que invierte en pauta
-          </h2>
+          <div className="ref-pill ref-pill--onSurface">Problema</div>
+          <h2 className="ref-h2 ref-h2--26">La realidad del marketing en una startup</h2>
+          <p className="ref-lede" style={{ maxWidth: "62ch", marginBottom: 48 }}>
+            Cinco cosas que pasan en todo equipo que invierte en pauta sin un sistema que la opere.
+          </p>
           <div className="ref-grid ref-grid--300">
             {PAINS.map((x) => (
               <div className="ref-pain" key={x.n}>
@@ -395,7 +451,7 @@ export default function ReferralsView({
             ))}
             <div className="ref-pain ref-pain--cta">
               <h3>Quiero ver mi data unificada.</h3>
-              <a href="#form" className="ref-btn ref-btn--invert">
+              <a href="#form" className="ref-btn ref-btn--invert ref-btn--card">
                 Empezar gratis 30 días
               </a>
             </div>
@@ -404,13 +460,13 @@ export default function ReferralsView({
       </section>
 
       {/* SOLUCIÓN */}
-      <section>
+      <section style={{ background: "#fff" }}>
         <div className="ref-wrap">
+          <div className="ref-pill ref-pill--onWhite">Solución</div>
           <div className="ref-split">
-            <div>
-              <div className="ref-eyebrow">La solución</div>
-              <h2>No es otro dashboard. Es la capa que decide y ejecuta.</h2>
-            </div>
+            <h2 className="ref-h2">
+              Marketing necesita un centro de inteligencia, no otra herramienta
+            </h2>
             <div>
               <p className="ref-sol-body">
                 Caperifai es un <strong>Marketing Neural Center</strong>: se conecta a tus cuentas
@@ -426,7 +482,7 @@ export default function ReferralsView({
               </p>
             </div>
           </div>
-          <div className="ref-grid ref-grid--250" style={{ marginTop: 48 }}>
+          <div className="ref-grid ref-grid--250" style={{ marginTop: 52 }}>
             {NOT_CARDS.map((x) => (
               <div className="ref-notcard" key={x.t}>
                 <h3>{x.t}</h3>
@@ -438,62 +494,158 @@ export default function ReferralsView({
       </section>
 
       {/* CÓMO FUNCIONA */}
-      <section id="como-funciona" className="ref-how">
-        <div className="ref-wrap">
-          <h2>Conecta. Interpreta. Activa.</h2>
-          <div className="ref-grid ref-grid--290">
-            {STEPS.map((x) => (
-              <div className="ref-step" key={x.n}>
-                <div className="ref-step-n">{x.n}</div>
-                <h3>{x.t}</h3>
-                <p>{x.p}</p>
-                <p className="ref-step-note">{x.note}</p>
+      <section id="como-funciona" className="ref-sec--surface">
+        <div className="ref-wrap ref-how-wrap">
+          <div className="ref-pill ref-pill--onSurface" style={{ marginBottom: 0 }}>
+            Cómo funciona
+          </div>
+          <h2 className="ref-h2" style={{ marginBottom: 20 }}>
+            Conecta. Interpreta. Activa.
+          </h2>
+
+          <div className="ref-step">
+            <div>
+              <div className="ref-step-n">01</div>
+              <h3>Conecta tu ecosistema</h3>
+              <p>
+                Integras canales, audiencias, CRM y sitio en una sola fuente de verdad. Se sincroniza
+                en tiempo real, con atribución unificada, para que dejes de operar a ciegas por
+                canal.
+              </p>
+              <p className="ref-step-note">Toma 15 minutos y no necesitas a un dev.</p>
+            </div>
+            <div className="ref-panel">
+              <div className="ref-panel-t">Ecosistema unificado</div>
+              <div className="ref-panel-s">4 de 4 canales sincronizados en tiempo real</div>
+              <div className="ref-chips">
+                {CONNECT_CHIPS.map((c) => (
+                  <span className="ref-chip" key={c}>
+                    {c}
+                  </span>
+                ))}
               </div>
-            ))}
+            </div>
+          </div>
+
+          <div className="ref-step">
+            <div>
+              <div className="ref-step-n">02</div>
+              <h3>Interpreta lo que sí importa</h3>
+              <p>
+                Analiza patrones, desempeño y señales de intención para separar lo que genera
+                crecimiento de lo que solo genera fricción: efectividad real de anuncios, atribución
+                directa y eficiencia de gasto.
+              </p>
+              <p className="ref-step-note">
+                Sabes qué campaña te trae clientes y cuál te trae ruido.
+              </p>
+            </div>
+            <div className="ref-panel ref-panel--bars">
+              <div className="ref-panel-t" style={{ marginBottom: 0 }}>
+                Desempeño y visibilidad
+              </div>
+              {METERS.map((m) => (
+                <div key={m.l}>
+                  <div className="ref-meter-head">
+                    <span>{m.l}</span>
+                    <b style={{ color: m.c }}>{m.v}</b>
+                  </div>
+                  <div className="ref-meter">
+                    <i style={{ width: m.v, background: m.c }} />
+                  </div>
+                </div>
+              ))}
+              <div className="ref-minis">
+                <div className="ref-mini">
+                  <div className="ref-mini-l">ROAS</div>
+                  <div className="ref-mini-n">+3.4x</div>
+                </div>
+                <div className="ref-mini">
+                  <div className="ref-mini-l">CTR</div>
+                  <div className="ref-mini-n">+40%</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="ref-step">
+            <div>
+              <div className="ref-step-n">03</div>
+              <h3>Activa decisiones con IA</h3>
+              <p>
+                Convierte esa inteligencia en acciones priorizadas: rebalancear presupuesto, ajustar
+                pujas, pausar lo que quema, escalar lo que rinde, rotar creativos antes de la fatiga.
+              </p>
+              <p className="ref-step-note">
+                Tú autorizas con un clic — o dejas que se ejecuten solas bajo tus reglas.
+              </p>
+            </div>
+            <div className="ref-aria">
+              <div className="ref-aria-head">
+                <Mark size={24} />
+                <span className="ref-aria-name">Aria</span>
+                <span className="ref-aria-role">· AI Copilot</span>
+                <span className="ref-aria-tag">Copilot</span>
+              </div>
+              <div className="ref-aria-body">
+                <p>
+                  Hola, Mateo. Detectamos una oportunidad para transferir el{" "}
+                  <strong>15% del presupuesto</strong> a los anuncios con mejor conversión.
+                </p>
+                <div className="ref-aria-actions">
+                  <span className="ref-aria-btn ref-aria-btn--solid">Autorizar</span>
+                  <span className="ref-aria-btn ref-aria-btn--ghost">Revisar</span>
+                </div>
+                <div className="ref-aria-list">
+                  {ARIA_ACTIONS.map((a) => (
+                    <div className="ref-aria-item" key={a.t}>
+                      <b>{a.t}</b>
+                      <span>{a.d}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* AGENTES */}
-      <section id="agentes" className="ref-dark ref-agents">
+      <section id="agentes" className="ref-sec--white">
         <div className="ref-wrap">
-          <h2>Un equipo de agentes trabajando sobre el mismo sistema</h2>
-          <p className="ref-agents-lede">
-            Cada agente resuelve una parte de tu operación y todos leen la misma data. No son cuatro
-            herramientas: es un equipo.
+          <div className="ref-pill ref-pill--onWhite">Agentes</div>
+          <h2 className="ref-h2 ref-h2--28">
+            Un equipo de agentes de IA trabajando sobre el mismo sistema de Growth
+          </h2>
+          <p className="ref-lede">
+            Cada agente resuelve una parte clave de tu operación —performance, SEO, contenido y
+            análisis— y todos leen la misma data. No son cuatro herramientas: es un equipo.
           </p>
           <div className="ref-grid ref-grid--320">
             <div className="ref-agent-main">
               <div className="ref-agent-head">
-                <div className="ref-agent-mark" />
+                <Mark size={30} />
                 <span className="ref-agent-name">Aria</span>
                 <span className="ref-agent-tag">Agente principal</span>
               </div>
               <div className="ref-agent-kind">Performance</div>
               <p>
-                Analiza campañas, audiencias, presupuesto y señales de conversión. Detecta anomalías
-                e ineficiencias antes de que escalen. Recomienda o ejecuta optimizaciones con lógica
-                de performance y límites claros.
+                Mejora el rendimiento de tus canales de adquisición: analiza señales de performance,
+                detecta ineficiencias y convierte tus objetivos en acciones sobre inversión,
+                audiencias y pacing.
               </p>
-              <div className="ref-agent-quote">
-                <p>
-                  “Hola, Mateo. Detectamos una oportunidad para transferir el 15% del presupuesto a
-                  los anuncios con mejor conversión.”
-                </p>
-                <div>
-                  <span className="ref-chip ref-chip--solid">Autorizar</span>
-                  <span className="ref-chip ref-chip--outline">Revisar</span>
-                </div>
-              </div>
+              <ul className="ref-agent-list">
+                <li>Analiza campañas, audiencias, presupuesto y señales de conversión.</li>
+                <li>Detecta oportunidades, anomalías e ineficiencias antes de que escalen.</li>
+                <li>Recomienda o ejecuta optimizaciones con límites claros.</li>
+              </ul>
             </div>
             <div className="ref-agents-side">
               {SIDE_AGENTS.map((a) => (
                 <div className="ref-agent-sm" key={a.name}>
                   <div className="ref-agent-sm-head">
                     <span className="ref-agent-sm-name">{a.name}</span>
-                    <span className="ref-agent-kind" style={{ marginBottom: 0 }}>
-                      {a.kind}
-                    </span>
+                    <span className="ref-agent-sm-kind">{a.kind}</span>
                   </div>
                   <p>{a.p}</p>
                 </div>
@@ -504,8 +656,8 @@ export default function ReferralsView({
       </section>
 
       {/* CONTROL */}
-      <section className="ref-control">
-        <div className="ref-wrap ref-wrap--md">
+      <section className="ref-sec--surface ref-control">
+        <div className="ref-wrap ref-wrap--1040">
           <h2>“¿Y si la IA se gasta mi presupuesto sola?”</h2>
           <div className="ref-grid ref-grid--280">
             <div className="ref-mode">
@@ -530,10 +682,12 @@ export default function ReferralsView({
         </div>
       </section>
 
-      {/* BULLETS */}
-      <section className="ref-bullets">
+      {/* BENEFICIOS */}
+      <section className="ref-sec--white">
         <div className="ref-wrap">
-          <h2 className="ref-h2 ref-h2--tight">Lo que deja de pasar a partir del día uno</h2>
+          <h2 className="ref-h2 ref-h2--26" style={{ marginBottom: 44 }}>
+            Lo que deja de pasar a partir del día uno
+          </h2>
           <div className="ref-grid ref-grid--340">
             {BULLETS.map(([strong, mid, em]) => (
               <div className="ref-bullet" key={strong}>
@@ -550,9 +704,9 @@ export default function ReferralsView({
       </section>
 
       {/* COMPARATIVA */}
-      <section className="ref-compare">
+      <section className="ref-sec--surface">
         <div className="ref-wrap">
-          <h2 className="ref-h2 ref-h2--wide" style={{ marginBottom: 36 }}>
+          <h2 className="ref-h2 ref-h2--28" style={{ marginBottom: 36 }}>
             Las cuatro salidas que tiene una startup, honestamente
           </h2>
           <div className="ref-table-scroll">
@@ -591,16 +745,16 @@ export default function ReferralsView({
         </div>
       </section>
 
-      {/* PRIMEROS 30 DÍAS */}
-      <section className="ref-days">
+      {/* 30 DÍAS */}
+      <section className="ref-sec--white">
         <div className="ref-wrap">
-          <h2 className="ref-h2">Qué pasa en tu prueba de 30 días</h2>
+          <h2 className="ref-h2" style={{ marginBottom: 44 }}>
+            Qué pasa en tu prueba de 30 días
+          </h2>
           <div className="ref-grid ref-grid--240">
             {DAYS.map((d) => (
-              <div className="ref-day" key={d.label} style={{ borderTopColor: d.borderColor || d.color }}>
-                <div className="ref-day-label" style={{ color: d.color }}>
-                  {d.label}
-                </div>
+              <div className="ref-day" key={d.label}>
+                <div className="ref-day-label">{d.label}</div>
                 <h3>{d.t}</h3>
                 <p>{d.p}</p>
               </div>
@@ -610,9 +764,9 @@ export default function ReferralsView({
       </section>
 
       {/* OFERTA */}
-      <section id="precio" className="ref-dark ref-offer">
-        <div className="ref-wrap ref-wrap--md">
-          <h2>{offerHeadline}</h2>
+      <section id="precio" className="ref-sec--surface ref-offer">
+        <div className="ref-wrap ref-wrap--1040">
+          <h2 className="ref-h2">{offerHeadline}</h2>
           <div className="ref-offer-grid">
             <div className="ref-offer-a">
               <div className="ref-offer-n">01</div>
@@ -625,9 +779,7 @@ export default function ReferralsView({
             <div className="ref-offer-b">
               <div className="ref-offer-n">02</div>
               <h3>Piloto Caperifai a precio de startup</h3>
-              <p>
-                Tres meses para ver resultados reales, sin compromiso a largo plazo. Incluye:
-              </p>
+              <p>Tres meses para ver resultados reales, sin compromiso a largo plazo. Incluye:</p>
               <ul className="ref-offer-list">
                 <li>Diagnóstico y entendimiento de todas tus campañas</li>
                 <li>Estrategia y acompañamiento en la ejecución</li>
@@ -650,23 +802,17 @@ export default function ReferralsView({
               Activar mis 30 días gratis
             </a>
           </div>
-        </div>
-      </section>
-
-      {/* RIESGO INVERTIDO */}
-      <section className="ref-risk">
-        <div className="ref-wrap ref-wrap--risk">
-          <h2>Lo único que arriesgas son 15 minutos de conexión</h2>
-          <p>
-            Los primeros 30 días no cuestan nada y no piden tarjeta. El piloto son tres meses, no un
-            año. Y si decides salirte, tu data es tuya y se va contigo.
+          <p className="ref-offer-risk">
+            Lo único que arriesgas son 15 minutos de conexión: los primeros 30 días no cuestan nada y
+            no piden tarjeta, el piloto son tres meses —no un año— y si decides salirte, tu data es
+            tuya y se va contigo.
           </p>
         </div>
       </section>
 
       {/* FAQ */}
-      <section className="ref-faq">
-        <div className="ref-wrap ref-wrap--faq">
+      <section className="ref-sec--white ref-faq">
+        <div className="ref-wrap ref-wrap--900">
           <h2 className="ref-h2">Preguntas que siempre nos hacen</h2>
           <div className="ref-faq-list">
             {FAQ.map((f) => (
@@ -682,25 +828,27 @@ export default function ReferralsView({
         </div>
       </section>
 
-      {/* CTA FINAL + FORM */}
-      <section id="form" className="ref-dark ref-final">
-        <div className="ref-final-in">
+      {/* FORM */}
+      <section id="form" className="ref-sec--surface">
+        <div className="ref-form-in">
           <div>
-            <h2>Tu pauta ya está corriendo. La pregunta es si alguien la está viendo.</h2>
-            <p className="ref-final-lede">
+            <h2 className="ref-h2">
+              Tu pauta ya está corriendo. La pregunta es si alguien la está viendo.
+            </h2>
+            <p className="ref-form-lede">
               Activa tus 30 días gratis, conecta tus cuentas y en una semana tienes la primera
               lectura real de dónde se va tu presupuesto.
             </p>
-            <div className="ref-final-row">
-              <a href="#form" className="ref-btn ref-btn--primary ref-btn--lg">
-                Empezar gratis 30 días
+            <div className="ref-form-row">
+              <a href="#form" className="ref-btn ref-btn--primary ref-btn--hero2">
+                Empezar ahora
               </a>
               <a
                 href={demoUrl || "#form"}
-                className="ref-btn ref-btn--onDark"
-                {...(demoUrl ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                className="ref-btn ref-btn--outline ref-btn--hero2"
+                {...demoProps}
               >
-                Agendar demo de 15 min
+                Solicita tu demo
               </a>
             </div>
             <p className="ref-ps">
@@ -812,17 +960,42 @@ export default function ReferralsView({
         </div>
       </section>
 
+      {/* CIERRE */}
+      <section className="ref-sec--white ref-close">
+        <div className="ref-wrap ref-wrap--close">
+          <h2>Impulsa tu rendimiento con IA, empieza hoy.</h2>
+          <p>Mejores resultados, menos esfuerzo, sin más contrataciones.</p>
+          <div className="ref-cta-row" style={{ marginBottom: 0 }}>
+            <a href="#form" className="ref-btn ref-btn--primary ref-btn--hero">
+              Empezar ahora
+            </a>
+            <a
+              href={demoUrl || "#form"}
+              className="ref-btn ref-btn--outline ref-btn--hero2"
+              {...demoProps}
+            >
+              Solicita tu demo
+            </a>
+          </div>
+        </div>
+      </section>
+
       {/* FOOTER */}
       <footer className="ref-footer">
         <div className="ref-footer-in">
           <div className="ref-footer-brand">
-            <div className="ref-footer-mark" />
-            <span className="ref-footer-name">Caperifai</span>
+            <Mark size={26} />
+            <span className="ref-footer-name">
+              caperif<i>ai</i>
+            </span>
           </div>
-          <span>*Basado en referencias de la industria. Los resultados pueden variar.</span>
-          <span>
-            © {new Date().getFullYear()} Caperifai · <a href="/privacidad">Aviso de privacidad</a>
-          </span>
+          <div className="ref-footer-links">
+            <a href="#precio">Planes</a>
+            <a href="#agentes">Agentes</a>
+            <a href="#form">Contáctanos</a>
+            <a href="/privacidad">Aviso de privacidad</a>
+          </div>
+          <span>© Caperifai {new Date().getFullYear()} · *Resultados basados en referencias de la industria.</span>
         </div>
       </footer>
     </div>
