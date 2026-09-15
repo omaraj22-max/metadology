@@ -156,6 +156,11 @@
   max-width: 20ch;
   text-wrap: balance;
 }
+/* Mismo tratamiento que el H1 del home de caperif.ai: no es un degradado, es el
+   concepto clave en violeta e itálica sobre el resto en tinta. Violeta #5E42FF
+   tomado del home, que difiere del #5A3AFF del resto de esta landing. */
+.ref-h1-accent { font-style: italic; color: #5e42ff; }
+
 .ref-hero-lede {
   font-size: clamp(16px, 1.35vw, 19px);
   line-height: 1.65;

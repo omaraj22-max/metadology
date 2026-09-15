@@ -340,7 +340,9 @@ export default function ReferralsView({
             <span />
             <span>{eyebrow}</span>
           </div>
-          <h1 className="ref-h1">El sistema operativo que tu equipo de Growth necesita</h1>
+          <h1 className="ref-h1">
+            El <em className="ref-h1-accent">sistema operativo</em> que tu equipo de Growth necesita
+          </h1>
           <p className="ref-hero-lede">
             A través de nuestro <strong>Marketing Neural Center</strong>, Caperifai conecta tus
             canales, tu CRM y tu web en un solo cerebro, entiende qué está moviendo tu crecimiento y
