@@ -18,9 +18,9 @@ import { findPartner } from "@/lib/partners";
 // Precio y condición son editables por link: ?precio=… &lista=… &condicion=…
 
 export const metadata = {
-  title: "Caperifai for Startups · El equipo de growth que todavía no puedes contratar",
+  title: "Caperifai for Startups · El sistema operativo que tu equipo de Growth necesita",
   description:
-    "Conecta tus canales, tu CRM y tu web en un solo cerebro. Aria analiza y ejecuta los cambios en tus campañas todos los días. 30 días gratis, sin tarjeta.",
+    "A través de nuestro Marketing Neural Center, Caperifai conecta tus canales, tu CRM y tu web en un solo cerebro y ejecuta los cambios en tus campañas todos los días. 30 días gratis, sin tarjeta.",
   // Es una landing de campaña por referido: no debe competir en orgánico con el home.
   robots: { index: false, follow: false },
 };

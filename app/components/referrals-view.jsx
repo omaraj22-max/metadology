@@ -265,7 +265,7 @@ export default function ReferralsView({
   demoUrl = "",
 }) {
   const eyebrow = referredMode
-    ? `${partner} te recomendó Caperifai · acceso de 30 días activo`
+    ? `${partner} te recomendó Caperifai · Early Stage Startup Pricing`
     : "Caperifai for Startups";
   const offerHeadline = referredMode
     ? `30 días gratis porque ${partner} te mandó`
@@ -340,11 +340,12 @@ export default function ReferralsView({
             <span />
             <span>{eyebrow}</span>
           </div>
-          <h1 className="ref-h1">El equipo de growth que todavía no puedes contratar</h1>
+          <h1 className="ref-h1">El sistema operativo que tu equipo de Growth necesita</h1>
           <p className="ref-hero-lede">
-            Caperifai conecta tus canales, tu CRM y tu web en un solo cerebro, entiende qué está
-            moviendo tu crecimiento y ejecuta los cambios en tus campañas todos los días. Tú
-            apruebas. Él opera. Sin nómina nueva, sin retainer de 12 meses.
+            A través de nuestro <strong>Marketing Neural Center</strong>, Caperifai conecta tus
+            canales, tu CRM y tu web en un solo cerebro, entiende qué está moviendo tu crecimiento y
+            ejecuta los cambios en tus campañas todos los días. Tú apruebas. Él opera. Sin nómina
+            nueva, sin retainer de 12 meses.
           </p>
           <div className="ref-cta-row">
             <a href="#form" className="ref-btn ref-btn--primary ref-btn--hero">
