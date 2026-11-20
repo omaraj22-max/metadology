@@ -1,17 +1,14 @@
 // Alta de leads de la landing de temporada (/campañas-navidenas).
-// Escribe en el mismo Apps Script que el resto del sitio con la acción "temporada"
-// (pestaña "Temporada", una fila por envío, columna "etapa" = Nuevo, columnas "calificado"
-// e "icp_fallas" según lib/temporada-icp.js, y aviso por correo al equipo). Si el Web App desplegado todavía es la versión vieja, cae a la acción
-// "lead" y el registro aterriza en la pestaña "Leads" con los campos que comparte.
+// Va a un Google Sheet PROPIO (no al del lead magnet): Apps Script en apps-script/temporada.gs,
+// desplegado como Web App; su URL /exec vive en la env TEMPORADA_WEBHOOK_URL.
+// Cada envío es una fila con etapa = Nuevo, calificado / icp_fallas según
+// lib/temporada-icp.js, fuente y UTMs, y el script avisa por correo al equipo.
 
 import { OPTIONS, qualify } from "@/lib/temporada-icp";
 
 export const runtime = "nodejs";
 
-const WEBHOOK =
-  process.env.APPS_SCRIPT_URL ||
-  process.env.NEXT_PUBLIC_WEBHOOK_URL ||
-  "https://script.google.com/macros/s/AKfycbyzmGS0QC27C9WNsaD7rKmEebPnQSGIA0TS6YXBIzFdmOCPqPZR2fFLE0h6iNgvF-JU/exec";
+const WEBHOOK = process.env.TEMPORADA_WEBHOOK_URL || "";
 
 const clean = (v, max = 400) => String(v ?? "").trim().slice(0, max);
 const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
@@ -75,12 +72,13 @@ export async function POST(req) {
     calificado: calificado ? "Sí" : "No",
     icp_fallas: fallas.join(" · "),
     ...lead,
-    // Alias de la pestaña "Leads" para que un Apps Script viejo también registre algo.
-    telefono: lead.whatsapp,
-    producto: `Temporada · ${calificado ? "ICP ✓" : "ICP ✗"} · ${lead.modalidad} · ${lead.giro}`,
-    link: lead.pagina,
-    problema: [lead.rol, lead.tamano, lead.canales, lead.inversion, lead.operador, lead.resultados, lead.medicion, fallas.join(", "), lead.fuente, lead.notas].filter(Boolean).join(" · "),
   };
+
+  if (!WEBHOOK) {
+    // Sin webhook configurado no se pierde el lead: queda en los logs de la función.
+    console.warn("[temporada] falta TEMPORADA_WEBHOOK_URL; lead sin registrar:", JSON.stringify(payload));
+    return Response.json({ ok: true, stored: false, calificado });
+  }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10000);
@@ -93,6 +91,8 @@ export async function POST(req) {
       signal: controller.signal,
     });
     if (!res.ok) throw new Error(`webhook ${res.status}`);
+    const out = await res.json().catch(() => null);
+    if (!out?.ok) throw new Error(`apps script: ${out?.error || "respuesta inválida"}`);
     return Response.json({ ok: true, stored: true, calificado });
   } catch (e) {
     console.error("[temporada] no se pudo registrar el lead:", e?.message || e, JSON.stringify({ calificado, fallas, ...lead }));
